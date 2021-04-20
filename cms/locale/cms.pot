@@ -1,15 +1,15 @@
 # Translations template for Contest Management System.
-# Copyright (C) 2018 CMS development group
+# Copyright (C) 2021 CMS development group
 # This file is distributed under the same license as the Contest Management
 # System project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2018.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Contest Management System 1.4.dev0\n"
+"Project-Id-Version: Contest Management System 1.4rc1\n"
 "Report-Msgid-Bugs-To: contestms@googlegroups.com\n"
-"POT-Creation-Date: 2018-10-01 09:06+0100\n"
+"POT-Creation-Date: 2021-04-20 15:17-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -338,6 +338,85 @@ msgstr ""
 msgid "Executed"
 msgstr ""
 
+msgid "Too many submissions!"
+msgstr ""
+
+#, python-format
+msgid "You have reached the maximum limit of at most %d submissions among all tasks."
+msgstr ""
+
+#, python-format
+msgid "You have reached the maximum limit of at most %d submissions on this task."
+msgstr ""
+
+msgid "Submissions too frequent!"
+msgstr ""
+
+#, python-format
+msgid "Among all tasks, you can submit again after %d seconds from last submission."
+msgstr ""
+
+#, python-format
+msgid "For this task, you can submit again after %d seconds from last submission."
+msgstr ""
+
+msgid "Invalid archive format!"
+msgstr ""
+
+msgid "The submitted archive could not be opened."
+msgstr ""
+
+msgid "Invalid submission format!"
+msgstr ""
+
+msgid "Submission too big!"
+msgstr ""
+
+#, python-format
+msgid "Each source file must be at most %d bytes long."
+msgstr ""
+
+msgid "Submission storage failed!"
+msgstr ""
+
+msgid "Too many tests!"
+msgstr ""
+
+#, python-format
+msgid "You have reached the maximum limit of at most %d tests among all tasks."
+msgstr ""
+
+#, python-format
+msgid "You have reached the maximum limit of at most %d tests on this task."
+msgstr ""
+
+msgid "Tests too frequent!"
+msgstr ""
+
+#, python-format
+msgid "Among all tasks, you can test again after %d seconds from last test."
+msgstr ""
+
+#, python-format
+msgid "For this task, you can test again after %d seconds from last test."
+msgstr ""
+
+msgid "Invalid test format!"
+msgstr ""
+
+msgid "Test too big!"
+msgstr ""
+
+msgid "Input too big!"
+msgstr ""
+
+#, python-format
+msgid "The input file must be at most %d bytes long."
+msgstr ""
+
+msgid "Test storage failed!"
+msgstr ""
+
 msgid "Communication"
 msgstr ""
 
@@ -633,12 +712,6 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-msgid "Time limit"
-msgstr ""
-
-msgid "Memory limit"
-msgstr ""
-
 msgid "Type"
 msgstr ""
 
@@ -776,6 +849,12 @@ msgid "%(lang)s"
 msgstr ""
 
 msgid "Some details"
+msgstr ""
+
+msgid "Time limit"
+msgstr ""
+
+msgid "Memory limit"
 msgstr ""
 
 msgid "Compilation commands"

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Contest Management System 1.4rc1\n"
 "Report-Msgid-Bugs-To: contestms@googlegroups.com\n"
-"POT-Creation-Date: 2021-03-05 22:39+0000\n"
+"POT-Creation-Date: 2021-04-20 15:17-0300\n"
 "PO-Revision-Date: 2020-11-14 20:50+0000\n"
 "Last-Translator: Ricardo Anido <ranido@ic.unicamp.br>\n"
 "Language: pt_BR\n"
@@ -169,45 +169,6 @@ msgstr "Compilação não necessária"
 
 msgid "File not submitted"
 msgstr "Arquivo não submetido"
-
-#, python-format
-msgid ""
-"You have reached the maximum limit of at most %d submissions among all tasks."
-msgstr ""
-"Você atingiu o limite máximo de %d submissões "
-"considerando todas as tarefas."
-
-#, python-format
-msgid ""
-"You have reached the maximum limit of at most %d submissions on this task."
-msgstr ""
-"Você atingiu o limite máximo de %d submissões para esta tarefa."
-
-msgid "Too many submissions!"
-msgstr "Submissões em demasia!"
-
-msgid "Among all tasks, you can submit again after"
-msgstr "Considerando todas as tarefas, você pode submeter uma nova solução"
-
-msgid "seconds from last submission."
-msgstr "segundos após sua submissão precedente."
-
-#, python-format
-msgid ""
-"Among all tasks, you can submit again after %d seconds from last submission."
-msgstr ""
-"Considerando todas as tarefas, você pode submeter uma nova solução %d segundos após sua submissão precedente."
-
-#, python-format
-msgid ""
-"For this task, you can submit again "
-"after %d seconds from last submission."
-msgstr ""
-"Para esta tarefa, você pode submeter uma nova solução %d segundos após "
-"sua submissão precedente."
-
-msgid "Submissions too frequent!"
-msgstr "Submissões demasiadamente frequentes!"
 
 msgid "Question too long!"
 msgstr "Pergunta muito longa!"
@@ -398,6 +359,85 @@ msgstr "Executando..."
 
 msgid "Executed"
 msgstr "Execução terminada"
+
+msgid "Too many submissions!"
+msgstr "Submissões em demasia"
+
+#, python-format
+msgid "You have reached the maximum limit of at most %d submissions among all tasks."
+msgstr "Você atingiu o limite máximo de %d print jobs."
+
+#, python-format
+msgid "You have reached the maximum limit of at most %d submissions on this task."
+msgstr "Você atingiu o limite máximo de %d print jobs."
+
+msgid "Submissions too frequent!"
+msgstr "Submissões demasiadamente frequentes!"
+
+#, python-format
+msgid "Among all tasks, you can submit again after %d seconds from last submission."
+msgstr "Considerando todas as tarefas, você pode submeter novamente %d segundos após sua última submissão."
+
+#, python-format
+msgid "For this task, you can submit again after %d seconds from last submission."
+msgstr "Para esta tarefa, você pode submeter novamente %d segundos após sua última submissão."
+
+msgid "Invalid archive format!"
+msgstr "Formato de arquivo inválido!"
+
+msgid "The submitted archive could not be opened."
+msgstr "O arquivo submetido não pôde ser aberto."
+
+msgid "Invalid submission format!"
+msgstr "Formato de submissão inválido!"
+
+msgid "Submission too big!"
+msgstr "Submissão grande demais!"
+
+#, python-format
+msgid "Each source file must be at most %d bytes long."
+msgstr "Cada arquivo deve ter no máximo %d bytes."
+
+msgid "Submission storage failed!"
+msgstr "Solicitação de impressão falhou!"
+
+msgid "Too many tests!"
+msgstr "Muitas solicitações de impressão!"
+
+#, python-format
+msgid "You have reached the maximum limit of at most %d tests among all tasks."
+msgstr "Você atingiu o limite máximo de %d print jobs."
+
+#, python-format
+msgid "You have reached the maximum limit of at most %d tests on this task."
+msgstr "Você atingiu o limite máximo de %d print jobs."
+
+msgid "Tests too frequent!"
+msgstr "Testes demasiadamente frequentes"
+
+#, python-format
+msgid "Among all tasks, you can test again after %d seconds from last test."
+msgstr "Considerando todas as tarefas, você pode testar novamente %d segundos após seu último teste."
+
+#, python-format
+msgid "For this task, you can test again after %d seconds from last test."
+msgstr "Para esta tarefa, você pode testar novamente %d segundos após seu último teste."
+
+msgid "Invalid test format!"
+msgstr "Formato inválido!"
+
+msgid "Test too big!"
+msgstr "Arquivo de teste demasiadamente grande!"
+
+msgid "Input too big!"
+msgstr "Arquivo de entrada demasiadamente grande!"
+
+#, python-format
+msgid "The input file must be at most %d bytes long."
+msgstr "Cada arquivo deve ter no máximo %d bytes."
+
+msgid "Test storage failed!"
+msgstr "Solicitação de impressão falhou!"
 
 msgid "Communication"
 msgstr "Comunicação"
@@ -725,12 +765,6 @@ msgstr "Tarefa"
 msgid "Name"
 msgstr "Nome"
 
-msgid "Time limit"
-msgstr "Limite de tempo"
-
-msgid "Memory limit"
-msgstr "Limite de memória"
-
 msgid "Type"
 msgstr "Tipo"
 
@@ -876,6 +910,12 @@ msgstr "%(lang)s"
 msgid "Some details"
 msgstr "Informações"
 
+msgid "Time limit"
+msgstr "Limite de tempo"
+
+msgid "Memory limit"
+msgstr "Limite de memória"
+
 msgid "Compilation commands"
 msgstr "Comandos de compilação"
 
@@ -1020,60 +1060,22 @@ msgstr "Informações sobre o teste"
 msgid "Evaluation outcome"
 msgstr "Resultado da avaliação"
 
-msgid "Submissions too frequent!"
-msgstr "Submissões demasiadamente frequentes!"
-
-msgid "Invalid submission format!"
-msgstr "Formato de submissão inválido!"
-
-msgid "Invalid archive format!"
-msgstr "Formato de arquico inválido!"
-
-msgid "The submitted archive could not be opened."
-msgstr "Não foi possível abrir o arquivo submetido."
-
-msgid "Cannot recognize the submission language."
-msgstr "Não foi possível reconhecer a linguagem de submissão."
+##############
+# ranido-begin
+#, python-format
+msgid "Among all tasks, you can submit again after 30 seconds from last submission."
+msgstr "Considerando todas as tarefas, você pode submeter novamente 30 segundos após sua última submissão."
 
 #, python-format
-msgid "Language %s not allowed in this contest."
-msgstr "A linguagem ‘%s’ não é permitida nesta competição."
+msgid "Among all tasks, you can submit again after 60 seconds from last submission."
+msgstr "Considerando todas as tarefas, você pode submeter novamente 60 segundos após sua última submissão."
 
 #, python-format
-msgid "You have reached the maximum limit of at most %d tests among all tasks."
-msgstr ""
-"Você atingiu o limite máximo de %d tests considerando todas as tarefas."
+msgid "For this task, you can submit again after 30 seconds from last submission."
+msgstr "Para esta tarefa, você pode submeter novamente 30 segundos após sua última submissão."
 
 #, python-format
-msgid "You have reached the maximum limit of at most %d tests on this task."
-msgstr "Você atingiu o limite máximo de %d tests para esta tarefa."
-
-msgid "Too many tests!"
-msgstr "Testes em demasia!"
-
-#, python-format
-msgid "Among all tasks, you can test again after %d seconds from last test."
-msgstr ""
-"Considerando todas as tarefas, você pode submeter um novo teste %d segundos após o teste precedente."
-
-#, python-format
-msgid "For this task, you can test again after %d seconds from last test."
-msgstr ""
-"Para esta tarefa, você pode submeter um novo teste %d seguntos após o teste precedente."
-
-msgid "Tests too frequent!"
-msgstr "Testes demasiadamente frequentes!"
-
-msgid "Invalid test format!"
-msgstr "Formato de teste inválido!"
-
-msgid "Cannot recognize the user test language."
-msgstr "Não foi possível reconhecer a linguagem do teste."
-
-msgid "Invalid test!"
-msgstr "Teste inválido!"
-
-msgid "Test too big!"
-msgstr "Teste demasiadamente grande!"
-
-
+msgid "For this task, you can submit again after 60 seconds from last submission."
+msgstr "Para esta tarefa, você pode submeter novamente 60 segundos após sua última submissão."
+# ranido-end
+#############
