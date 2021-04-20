@@ -376,11 +376,15 @@ msgstr "Submissões demasiadamente frequentes!"
 
 #, python-format
 msgid "Among all tasks, you can submit again after %d seconds from last submission."
-msgstr "Considerando todas as tarefas, você pode submeter novamente %d segundos após sua última submissão."
+msgstr ""
+"Considerando todas as tarefas, você pode submeter novamente %d segundos após"
+" sua última submissão."
 
 #, python-format
 msgid "For this task, you can submit again after %d seconds from last submission."
-msgstr "Para esta tarefa, você pode submeter novamente %d segundos após sua última submissão."
+msgstr ""
+"Para esta tarefa, você pode submeter novamente %d segundos após sua última "
+"submissão."
 
 msgid "Invalid archive format!"
 msgstr "Formato de arquivo inválido!"
@@ -417,11 +421,15 @@ msgstr "Testes demasiadamente frequentes"
 
 #, python-format
 msgid "Among all tasks, you can test again after %d seconds from last test."
-msgstr "Considerando todas as tarefas, você pode testar novamente %d segundos após seu último teste."
+msgstr ""
+"Considerando todas as tarefas, você pode testar novamente %d segundos após "
+"seu último teste."
 
 #, python-format
 msgid "For this task, you can test again after %d seconds from last test."
-msgstr "Para esta tarefa, você pode testar novamente %d segundos após seu último teste."
+msgstr ""
+"Para esta tarefa, você pode testar novamente %d segundos após seu último "
+"teste."
 
 msgid "Invalid test format!"
 msgstr "Formato inválido!"
@@ -1060,22 +1068,24 @@ msgstr "Informações sobre o teste"
 msgid "Evaluation outcome"
 msgstr "Resultado da avaliação"
 
-##############
+# #############
 # ranido-begin
-#, python-format
-msgid "Among all tasks, you can submit again after 30 seconds from last submission."
-msgstr "Considerando todas as tarefas, você pode submeter novamente 30 segundos após sua última submissão."
 
-#, python-format
-msgid "Among all tasks, you can submit again after 60 seconds from last submission."
-msgstr "Considerando todas as tarefas, você pode submeter novamente 60 segundos após sua última submissão."
-
-#, python-format
 msgid "For this task, you can submit again after 30 seconds from last submission."
 msgstr "Para esta tarefa, você pode submeter novamente 30 segundos após sua última submissão."
 
-#, python-format
 msgid "For this task, you can submit again after 60 seconds from last submission."
 msgstr "Para esta tarefa, você pode submeter novamente 60 segundos após sua última submissão."
+
+msgid "Among all tasks, you can submit again after 30 seconds from last submission."
+msgstr ""
+"Considerando todas as tarefas, você pode submeter novamente 30 segundos após"
+" sua última submissão."
+
+msgid "Among all tasks, you can submit again after 60 seconds from last submission."
+msgstr ""
+"Considerando todas as tarefas, você pode submeter novamente 60 segundos após"
+" sua última submissão."
+
 # ranido-end
-#############
+# #############
