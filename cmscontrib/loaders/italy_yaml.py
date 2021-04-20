@@ -458,6 +458,11 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         load(conf, args, ["time_limit", "timeout"], conv=float)
         load(conf, args, ["memory_limit", "memlimit"])
 
+        # ranido-begin
+        args["time_limit_lang"] = {}
+        args["memory_limit_lang"] = {}
+        # ranido-end
+        
         # Builds the parameters that depend on the task type
         args["managers"] = []
         infile_param = conf.get("infile", "input.txt")

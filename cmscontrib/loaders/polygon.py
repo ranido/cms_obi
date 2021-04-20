@@ -185,6 +185,11 @@ class PolygonTaskLoader(TaskLoader):
             args["time_limit"] = tl * 0.001
             args["memory_limit"] = ml // (1024 * 1024)
 
+            # ranido-begin
+            args["time_limit_lang"] = {}
+            args["memory_limit_lang"] = {}
+            # ranido-end
+            
             args["managers"] = {}
             infile_param = judging.attrib['input-file']
             outfile_param = judging.attrib['output-file']
