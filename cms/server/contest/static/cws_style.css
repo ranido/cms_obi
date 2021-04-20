@@ -397,7 +397,7 @@ td.token_rules p:last-child {
 .notifications {
     position: fixed;
     /* ranido-begin */
-    top: 135px;
+    top: 126px;
     /* ranido-end */
     width: 0;
     right: 0;
