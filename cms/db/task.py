@@ -401,6 +401,16 @@ class Dataset(Base):
         CheckConstraint("memory_limit > 0"),
         nullable=True)
 
+    # ranido-begin
+    # Time and memory limits for every testcase.
+    time_limit_lang = Column(
+        JSONB,
+        nullable=True)
+    memory_limit_lang = Column(
+        JSONB,
+        nullable=True)
+    # ranido-end
+    
     # Name of the TaskType child class suited for the task.
     task_type = Column(
         String,

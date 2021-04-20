@@ -32,6 +32,9 @@ import ipaddress
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.declarative import as_declarative
+# ranido-begin
+from sqlalchemy.orm.attributes import flag_modified
+# ranido-end
 from sqlalchemy.orm.exc import ObjectDeletedError
 from sqlalchemy.orm.session import object_session
 from sqlalchemy.orm import \
@@ -322,7 +325,11 @@ class Base(object):
                                     "for keyword argument '%s', which requires "
                                     "a list of '%s'"
                                     % (type(item), prp.key, py_item_type))
+                    # ranido-begin
+                    if prp.key in ('time_limit_lang','memory_limit_lang'):
+                        flag_modified(self, prp.key)
                     setattr(self, prp.key, val)
+                    # ranido-end
 
         for prp in self._rel_props:
             if prp.key in attrs:

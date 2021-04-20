@@ -97,18 +97,68 @@
             <th>{% trans %}Type{% endtrans %}</th>
             <td colspan="2">{% set task_type = get_task_type(dataset=task.active_dataset) %}{{ task_type.name }}</td>
         </tr>
-{% if task.active_dataset.time_limit is not none %}
-        <tr>
-            <th>{% trans %}Time limit{% endtrans %}</th>
-            <td colspan="2">{{ task.active_dataset.time_limit|format_duration(length="long") }}</td>
-        </tr>
+{# ranido-begin #}
+{% if task.active_dataset.time_limit_lang is not none %}
+    {% set time_limits = task.active_dataset.time_limit_lang %}
+    <tr>
+      <th rowspan="{{ contest.languages|length }}">{% trans %}Time limit{% endtrans %}</th>
+      {% for l in contest.languages %}
+      {% if not loop.first %}
+    </tr>
+    <tr>
+      {% endif %}
+      <td>{{ l }}</td>
+      <td class="compilation_command_cell">
+        {# don't know how to select a specific item in dict, so... #}
+        {# set time_limit_lang = time_limits|selectattr("key","equalto", l)|first #}
+	{% set time_limit_lang = [] %} {# normal variable does not update inside for #}
+        {% for lang, t in time_limits|dictsort(by="key") %}
+  	    {% if lang == l %} {% if time_limit_lang.append(t) %} {% endif %} {% endif %}
+	{% endfor %}
+        {% if time_limit_lang %} {{ time_limit_lang.0|format_duration(length="long") }} {% else %} {{ task.active_dataset.time_limit|format_duration(length="long") }} {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+{% else %} {% if task.active_dataset.time_limit is not none %}
+    <tr>
+      <th>{% trans %}Time limit{% endtrans %}</th>
+      <td colspan="2">{{ task.active_dataset.time_limit|format_duration(length="long") }}</td>
+    </tr>
 {% endif %}
-{% if task.active_dataset.memory_limit is not none %}
-        <tr>
-            <th>{% trans %}Memory limit{% endtrans %}</th>
-            <td colspan="2">{{ (task.active_dataset.memory_limit * 1024 * 1024)|format_size }}</td>
-        </tr>
 {% endif %}
+{# ranido-end #}
+
+{% if task.active_dataset.memory_limit_lang is not none %}
+    <tr>
+      <th rowspan="{{ contest.languages|length }}">{% trans %}Memory limit{% endtrans %}</th>
+    {% set memory_limits = task.active_dataset.memory_limit_lang %}
+
+    {% for l in contest.languages %}
+        {% if not loop.first %}
+  </tr>
+  <tr>
+        {% endif %}
+    <td>{{ l }}</td>
+    <td class="compilation_command_cell">
+        {# don't know how to select a specific item in dict, so... #}
+        {# set memory_limit_lang = memory_limits|selectattr("key","equalto", l)|first #}
+	{% set memory_limit_lang = [] %} {# normal variable does not update inside for #}
+        {% for lang, m in memory_limits|dictsort(by="key") %}
+	    {% if lang == l %} {% if memory_limit_lang.append(m) %} {% endif %} {% endif %}
+	{% endfor %}
+        {% if memory_limit_lang %} {{ (memory_limit_lang.0 * 1024 * 1024)|format_size }} {% else %} {{ (task.active_dataset.memory_limit * 1024 * 1024)|format_size }} {% endif %}
+    </td>
+    {% endfor %}
+    </tr>
+{% else %} {% if task.active_dataset.memory_limit is not none %}
+    <tr>
+      <th>{% trans %}Memory limit{% endtrans %}</th>
+      <td colspan="2">{{ (task.active_dataset.memory_limit * 1024 * 1024)|format_size }}</td>
+    </tr>
+{% endif %}
+{% endif %}
+{# ranido-end #}
+
 {% set compilation_commands = task_type.get_compilation_commands(task.submission_format) %}
 {% if compilation_commands is not none %}
 {% set compilation_commands = compilation_commands|dictselect("in", contest.languages, by="key") %}

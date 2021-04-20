@@ -532,6 +532,16 @@ class EvaluationJob(Job):
 
         # dict() is required to detach the dictionary that gets added
         # to the Job from the control of SQLAlchemy
+        # ranido-begin
+        try:
+            time_limit = dataset.time_limit_lang[submission.language]
+        except:
+            time_limit=dataset.time_limit
+        try:
+            memory_limit = dataset.memory_limit_lang[submission.language]
+        except:
+            memory_limit=dataset.memory_limit
+        logger.info("using time_limit = %s, memory_limit = %s for %s",time_limit,memory_limit,submission.language)
         return EvaluationJob(
             operation=operation,
             task_type=dataset.task_type,
@@ -543,10 +553,11 @@ class EvaluationJob(Job):
             executables=dict(submission_result.executables),
             input=testcase.input,
             output=testcase.output,
-            time_limit=dataset.time_limit,
-            memory_limit=dataset.memory_limit,
+            time_limit=time_limit,
+            memory_limit=memory_limit,
             info=info
         )
+        # ranido-end
 
     def to_submission(self, sr):
         """Fill detail of the submission result with the job result.

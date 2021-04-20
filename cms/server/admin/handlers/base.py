@@ -421,6 +421,62 @@ class BaseHandler(CommonRequestHandler):
                 raise ValueError("Time limit out of range.")
             dest["time_limit"] = value
 
+    # ranido-begin
+    def get_time_limit_lang(self, dest, field, time_limit_name):
+        """Parse the time limit.
+
+        Read the argument with the given name and use its value to set
+        the "time_limit" item of the given dictionary.
+
+        dest (dict): a place to store the result.
+        field (string): the name of the argument to use.
+        time_limit_name (string): the name of the language time limit.
+
+        """
+        logger.warning("in get_time_limit_lang")
+        value = self.get_argument(field, None)
+        if value is None:
+            return
+        if len(value) == 0:
+            dest["time_limit_lang"][time_limit_name] = None
+        else:
+            try:
+                value = float(value)
+            except:
+                raise ValueError("Can't cast %s to float." % value)
+            if not 0 <= value < float("+inf"):
+                raise ValueError("Time limit out of range.")
+            dest["time_limit_lang"][time_limit_name] = value
+        logger.warning("finished")
+
+    def get_memory_limit_lang(self, dest, field, memory_limit_name):
+        """Parse the memory limit.
+
+        Read the argument with the given name and use its value to set
+        the "memory_limit" item of the given dictionary.
+
+        dest (dict): a place to store the result.
+        field (string): the name of the argument to use.
+
+        """
+        logger.warning("in get_memory_limit_lang")
+        value = self.get_argument(field, None)
+        if value is None:
+            return
+        if len(value) == 0:
+            dest["memory_limit_lang"][memory_limit_name] = None
+        else:
+            try:
+                value = int(value)
+            except:
+                raise ValueError("Can't cast %s to float." % value)
+            if not 0 < value:
+                raise ValueError("Invalid memory limit.")
+            dest["memory_limit_lang"][memory_limit_name] = value
+        logger.warning("finished")
+
+    # ranido-end
+
     def get_memory_limit(self, dest, field):
         """Parse the memory limit.
 
