@@ -338,73 +338,58 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
     <div id="task_type_{{ dataset.id }}" class="task_dataset_params">
       <table>
 
-       <tr><td colspan=2><h3>Limits</h3></td></tr>
        {# ranido-begin #}
-	{% if dataset.time_limit_lang is not none %}
-	   {% set time_limits = dataset.time_limit_lang %}
+       {% set time_limits = dataset.time_limit_lang %}
+       {% set memory_limits = dataset.memory_limit_lang %}
+       {% if (time_limits is not none) or (memory_limits is not none) %}
+         {% for l in contest.languages %}
+       <tr><td colspan=2><h3>Limits {{ l}}</h3></td></tr>
        <tr>
-           {% for l in contest.languages %}
-              {% if not loop.first %}
+         <td>
+           <span class="info" title="Total maximum time for each evaluation in {{ l }}, in seconds."></span>
+           Time limit
+         </td>
+         <td>
+           {# don't know how to select a specific item in dict, so... #}
+           {% set time_limit_lang = [] %} {# normal variable does not update inside for #}
+           {% if time_limits %} {% for lang, t in time_limits|dictsort(by="key") %}
+             {% if lang == l %} {% if time_limit_lang.append(t) %} {% endif %} {% endif %}
+           {% endfor %} {% endif %}
+           {% if time_limit_lang %}
+           <input type="text" name="time_limit_lang_{{ l }}_{{ dataset.id }}" value="{{ time_limit_lang.0 }}"/> second(s)
+           {% else %}
+           <input type="text" name="time_limit_lang_{{ l }}_{{ dataset.id }}" value="{{ dataset.time_limit if dataset.time_limit is not none else "" }}"/> second(s)
+           {% endif %}
+         </td>
        </tr>
        <tr>
-              {% endif %}
-          <td>
-            <span class="info" title="Total maximum time for each evaluation in {{ l }}, in seconds."></span>
-            Time limit {{ l }}
-          </td>
-          <td>
-                {# don't know how to select a specific item in dict, so... #}
-                {% set time_limit_lang = [] %} {# normal variable does not update inside for #}
-                {% if time_limits %} {% for lang, t in time_limits|dictsort(by="key") %}
-                    {% if lang == l %} {% if time_limit_lang.append(t) %} {% endif %} {% endif %}
-                {% endfor %} {% endif %}
-                {% if time_limit_lang %}
-            <input type="text" name="time_limit_lang_{{ l }}_{{ dataset.id }}" value="{{ time_limit_lang.0 }}"/> second(s)
-                {% else %}
-            <input type="text" name="time_limit_lang_{{ l }}_{{ dataset.id }}" value="{{ dataset.time_limit if dataset.time_limit is not none else "" }}"/> second(s)
-                {% endif %}
-          </td>
-
-            {% endfor %}
+	 <td>
+           <span class="info" title="Total maximum memory usage for each evaluation in {{ l }}, in MiB (2^20 bytes)."></span>
+           Memory limit
+         </td>
+         <td>
+           {# don't know how to select a specific item in dict, so... #}
+           {% set memory_limit_lang = [] %} {# normal variable does not update inside for #}
+           {% if memory_limits %} {% for lang, t in memory_limits|dictsort(by="key") %}
+             {% if lang == l %} {% if memory_limit_lang.append(t) %} {% endif %} {% endif %}
+           {% endfor %} {% endif %}
+           {% if memory_limit_lang %}
+           <input type="text" name="memory_limit_lang_{{ l }}_{{ dataset.id }}" value="{{ memory_limit_lang.0 }}"/> MiB
+           {% else %}
+           <input type="text" name="memory_limit_lang_{{ l }}_{{ dataset.id }}" value="{{ dataset.memory_limit if dataset.memory_limit is not none else "" }}"/> MiB
+           {% endif %}
+         </td>
        </tr>
+         {% endfor %}
        {% else %}
+       <tr><td colspan=2><h3>Limits</h3></td></tr>
        <tr>
-          <td>
-            <span class="info" title="Total maximum time for each evaluation, if not set specifically for a language, in seconds"></span>
+         <td>
+           <span class="info" title="Total maximum time for each evaluation, if not set specifically for a language, in seconds"></span>
             Time limit
           </td>
           <td><input type="text" name="time_limit_{{ dataset.id }}" value="{{ dataset.time_limit if dataset.time_limit is not none else "" }}"/> second(s)</td>
         </tr>
-	{% endif %}
-
-	{% if dataset.memory_limit_lang is not none %}
-	   {% set memory_limits = dataset.memory_limit_lang %}
-       <tr>
-           {% for l in contest.languages %}
-              {% if not loop.first %}
-       </tr>
-       <tr>
-              {% endif %}
-          <td>
-            <span class="info" title="Total maximum memory usage for each evaluation in {{ l }}, in MiB (2^20 bytes)."></span>
-            Memory limit {{ l }}
-          </td>
-          <td>
-                {# don't know how to select a specific item in dict, so... #}
-                {% set memory_limit_lang = [] %} {# normal variable does not update inside for #}
-                {% if memory_limits %} {% for lang, t in memory_limits|dictsort(by="key") %}
-                    {% if lang == l %} {% if memory_limit_lang.append(t) %} {% endif %} {% endif %}
-                {% endfor %} {% endif %}
-                {% if memory_limit_lang %}
-            <input type="text" name="memory_limit_lang_{{ l }}_{{ dataset.id }}" value="{{ memory_limit_lang.0 }}"/> MiB
-                {% else %}
-            <input type="text" name="memory_limit_lang_{{ l }}_{{ dataset.id }}" value="{{ dataset.memory_limit if dataset.memory_limit is not none else "" }}"/> MiB
-                {% endif %}
-          </td>
-
-            {% endfor %}
-       </tr>
-       {% else %}
        <tr>
           <td>
             <span class="info" title="Total maximum memory usage for each evaluation, if not set specifically for a language, in MiB (2^20 bytes)."></span>
@@ -412,8 +397,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           </td>
           <td><input type="text" name="memory_limit_{{ dataset.id }}" value="{{ dataset.memory_limit if dataset.memory_limit is not none else "" }}"/> MiB</td>
         </tr>
-	{% endif %}
-
+       {% endif %}
        {# ranido-end #}
        
        <tr><td colspan=2><h3>Task type settings (<a href="http://cms.readthedocs.org/en/{{ rtd_version }}/Task%20types.html" target="_blank">documentation</a>)</h3></td></tr>
