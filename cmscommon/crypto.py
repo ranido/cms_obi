@@ -42,7 +42,7 @@ from Crypto.Cipher import AES
 from cmscommon.binary import bin_to_hex, hex_to_bin, bin_to_b64, b64_to_bin
 
 # ranido-begin
-from cmscommon.hashers import check_pbkdf2_password
+from cmscommon.hashers import check_pbkdf2_password, PBKDF2PasswordHasher
 # ranido-end
 
 __all__ = [
@@ -228,11 +228,6 @@ def build_password(password, method="plaintext"):
 
     """
     # TODO make sure it's a valid bcrypt hash if method is bcrypt.
-
-    # ranido-begin
-    if password.find("pbkdf2") == 0:
-        method = 'pbkdf2'
-    # ranido-end
     return "%s:%s" % (method, password)
 
 
@@ -252,6 +247,12 @@ def hash_password(password, method="bcrypt"):
         payload = bcrypt.hashpw(password, bcrypt.gensalt()).decode('ascii')
     elif method == "plaintext":
         payload = password
+    # ranido-begin
+    elif method == "pbkdf2":
+        hasher = PBKDF2PasswordHasher()
+        password = password.encode('utf-8')
+        payload = hasher.encode(password, hasher.salt())
+    # ranido-end
     else:
         raise ValueError("Authentication method not known.")
 

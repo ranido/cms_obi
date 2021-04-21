@@ -178,6 +178,9 @@ setup(
             "cmsRemoveTask=cmscontrib.RemoveTask:main",
             "cmsRemoveUser=cmscontrib.RemoveUser:main",
             "cmsSpoolExporter=cmscontrib.SpoolExporter:main",
+            # ranido-begin
+            "cmsUpdatePassword=cmscontrib.UpdatePassword:main",
+            # ranido-end
             "cmsMake=cmstaskenv.cmsMake:main",
         ],
         "cms.grading.tasktypes": [
