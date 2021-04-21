@@ -8,9 +8,10 @@ Contest Management System
 Homepage: <http://cms-dev.github.io/>
 
 
+===================================================================
 Preambule
 ---------
-This is a branch of the original CMS, adapted to the needs of the
+This is a branch of the original CMS version 1.4rc1, adapted to the needs of the
 Brazilian Olympiad in Informatics (https://olimpiada.ic.unicamp.br).
 
 It implements three modifications:
@@ -24,23 +25,35 @@ It implements three modifications:
    parameter. Then, in the admin interface, the values for each language
    can be set.
    Affected files:
-      cms_obi/cms/db/base.py
-      cms_obi/cms/grading/Job.py
-      cms_obi/cms/server/admin/handlers/task.py
-      cms_obi/cms/server/admin/templates/fragments/hashed_password_form.html      
-      cms_obi/cms/server/admin/templates/task.html
-      cms_obi/cmscommon/crypto.py
-      cms_obi/cmscommon/hashers.py
-      cms_obi/cmscontrib/AddUser.py
+      cms/db/base.py
+      cms/cms/db/task.py
+      cms/grading/Job.py
+      cms/server/admin/handlers/base.py
+      cms/server/admin/handlers/task.py
+      cms/server/admin/templates/fragments/hashed_password_form.html      
+      cms/server/admin/templates/task.html
+      cms/server/contest/templates/contest.html
+      cms/server/contest/templates/overview.html
+      cms/server/contest/templates/task_description.html
       
-2) Allow the use of the pbkdf2 hashing method for passwords
-   See cmsAddUser, cmsImportUser and the admin interface.
+2) Allow using the pbkdf2 hashing method for passwords.
    Affected files:
-   
-3) Put a logo in the header of the contest page
-   Affected files:
-      cms_obi/cms/server/contest/static/cws_style.css
+      cmscommon/crypto.py
+      cmscommon/hashers.py (added)
+      cmscontrib/AddUser.py
+      cmscontrib/UpdatePassword.py (added)
+      setup.py
       
+3) Put a logo in the header of the contest page.
+   Affected files:
+      cms/server/contest/static/cws_style.css
+      cms/server/contest/static/img/logo.svg (added)
+      cms/server/contest/templates/header_logo.html (added)
+   (you need to edit header_logo.html to set the link address)
+
+Many thanks to the CMS team for this wonderfull system!
+Ricardo Anido (ranido@ic.unicamp.br)
+===================================================================
 
 Introduction
 ------------
