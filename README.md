@@ -30,7 +30,6 @@ It implements three modifications:
      * cms/grading/Job.py
      * cms/server/admin/handlers/base.py
      * cms/server/admin/handlers/task.py
-     * cms/server/admin/templates/fragments/hashed_password_form.html      
      * cms/server/admin/templates/task.html
      * cms/server/contest/templates/contest.html
      * cms/server/contest/templates/overview.html
@@ -43,7 +42,8 @@ It implements three modifications:
      * cmscommon/hashers.py (added)
      * cmscontrib/AddUser.py
      * cmscontrib/UpdatePassword.py (added)
-      setup.py
+     * cms/server/admin/templates/fragments/hashed_password_form.html      
+     * setup.py
       
 3. Put a logo in the header of the contest page.
 
