@@ -8,15 +8,14 @@ Contest Management System
 Homepage: <http://cms-dev.github.io/>
 
 
----------
 Preambule
 ---------
-This is a branch of the original CMS version 1.4rc1, adapted to the needs of the
+This is a fork of the original CMS version 1.4rc1, adapted to the needs of the
 Brazilian Olympiad in Informatics (https://olimpiada.ic.unicamp.br).
 
 It implements three modifications:
 
-1) Allow different time and memory limits for different programming languages.
+1. Allow different time and memory limits for different programming languages.
    Two new JSONB columns were created in the database for the table "dataset",
    to store a dictionary for the memory limits (column "memory_limit_lang")
    and a dictionary for the time limits (column "time_limit_lang"). Initially,
@@ -24,36 +23,40 @@ It implements three modifications:
    parameter, the memory limit is the value of the usual "memory limit" task
    parameter. Then, in the admin interface, the values for each language
    can be set.
+
    Affected files:
-      cms/db/base.py
-      cms/cms/db/task.py
-      cms/grading/Job.py
-      cms/server/admin/handlers/base.py
-      cms/server/admin/handlers/task.py
-      cms/server/admin/templates/fragments/hashed_password_form.html      
-      cms/server/admin/templates/task.html
-      cms/server/contest/templates/contest.html
-      cms/server/contest/templates/overview.html
-      cms/server/contest/templates/task_description.html
+     * cms/db/base.py
+     * cms/cms/db/task.py
+     * cms/grading/Job.py
+     * cms/server/admin/handlers/base.py
+     * cms/server/admin/handlers/task.py
+     * cms/server/admin/templates/task.html
+     * cms/server/contest/templates/contest.html
+     * cms/server/contest/templates/overview.html
+     * cms/server/contest/templates/task_description.html
       
-2) Allow using the pbkdf2 hashing method for passwords.
+2. Allow using the pbkdf2 hashing method for passwords (we wanted to use the
+   same passwords the contestants already had for our main web server, Django).
+
    Affected files:
-      cmscommon/crypto.py
-      cmscommon/hashers.py (added)
-      cmscontrib/AddUser.py
-      cmscontrib/UpdatePassword.py (added)
-      setup.py
+     * cmscommon/crypto.py
+     * cmscommon/hashers.py (added)
+     * cmscontrib/AddUser.py
+     * cmscontrib/UpdatePassword.py (added)
+     * cms/server/admin/templates/fragments/hashed_password_form.html      
+     * setup.py
       
-3) Put a logo in the header of the contest page.
+3. Put a logo in the header of the contest page.
+
    Affected files:
-      cms/server/contest/static/cws_style.css
-      cms/server/contest/static/img/logo.svg (added)
-      cms/server/contest/templates/header_logo.html (added)
+     * cms/server/contest/static/cws_style.css
+     * cms/server/contest/static/img/logo.svg (added)
+     * cms/server/contest/templates/header_logo.html (added)
    (you need to edit header_logo.html to set the link address)
 
 Many thanks to the CMS team for this wonderfull system!
-Ricardo Anido (ranido@ic.unicamp.br)
 
+Ricardo Anido (ranido@ic.unicamp.br)
 
 Introduction
 ------------
@@ -135,4 +138,3 @@ find an updated list at <http://cms-dev.github.io/testimonials.html>.
 If you used CMS for a contest, selection, or a similar event, and want
 to publicize this information, we would be more than happy to hear
 from you and add it to that list.
-
