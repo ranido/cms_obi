@@ -508,7 +508,7 @@ msgid "Password"
 msgstr "Senha"
 
 msgid "Login"
-msgstr "Login"
+msgstr "Entrar"
 
 msgid "New message"
 msgstr "Nova mensagem"
