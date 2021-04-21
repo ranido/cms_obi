@@ -35,7 +35,8 @@ It implements three modifications:
      * cms/server/contest/templates/overview.html
      * cms/server/contest/templates/task_description.html
       
-2. Allow using the pbkdf2 hashing method for passwords.
+2. Allow using the pbkdf2 hashing method for passwords (we wanted to use the
+   same passwords the contestants already had for our main web server, Django).
 
    Affected files:
      * cmscommon/crypto.py
