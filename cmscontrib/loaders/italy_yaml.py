@@ -264,7 +264,14 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             return None
 
         load(conf, args, "username")
-        load(conf, args, "password", conv=build_password)
+        # ranido-begin
+        args_tmp = {}
+        load(conf, args_tmp, "method")
+        if "method" not in args_tmp:
+            args_tmp['method'] = 'plaintext'
+        load(conf, args, "password")
+        args['password'] = build_password(args['password'], args_tmp['method'])
+        # ranido-end
 
         load(conf, args, ["first_name", "nome"])
         load(conf, args, ["last_name", "cognome"])
