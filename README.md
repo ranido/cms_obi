@@ -8,7 +8,7 @@ Contest Management System
 Homepage: <http://cms-dev.github.io/>
 
 
-===================================================================
+---------
 Preambule
 ---------
 This is a branch of the original CMS version 1.4rc1, adapted to the needs of the
@@ -53,7 +53,7 @@ It implements three modifications:
 
 Many thanks to the CMS team for this wonderfull system!
 Ricardo Anido (ranido@ic.unicamp.br)
-===================================================================
+
 
 Introduction
 ------------
