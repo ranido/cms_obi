@@ -51,6 +51,7 @@ It implements three modifications:
    (you need to edit header_logo.html to set the link address)
 
 Many thanks to the CMS team for this wonderfull system!
+
 Ricardo Anido (ranido@ic.unicamp.br)
 
 Introduction
