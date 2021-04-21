@@ -402,13 +402,15 @@ class Dataset(Base):
         nullable=True)
 
     # ranido-begin
-    # Time and memory limits for every testcase.
+    # Time and memory limits for each language, for every testcase.
     time_limit_lang = Column(
         JSONB,
-        nullable=True)
+        nullable=True,
+        default={})
     memory_limit_lang = Column(
         JSONB,
-        nullable=True)
+        nullable=True,
+        default={})
     # ranido-end
     
     # Name of the TaskType child class suited for the task.

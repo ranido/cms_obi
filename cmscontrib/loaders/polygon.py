@@ -185,11 +185,6 @@ class PolygonTaskLoader(TaskLoader):
             args["time_limit"] = tl * 0.001
             args["memory_limit"] = ml // (1024 * 1024)
 
-            # ranido-begin
-            args["time_limit_lang"] = {}
-            args["memory_limit_lang"] = {}
-            # ranido-end
-            
             args["managers"] = {}
             infile_param = judging.attrib['input-file']
             outfile_param = judging.attrib['output-file']
@@ -383,7 +378,7 @@ class PolygonContestLoader(ContestLoader):
 
         args = {}
         # ranido-begin
-        args["allowed_localizations"] = ["pt-BR",]
+        # args["allowed_localizations"] = ["pt-BR",]
         # ranido-end
 
         tree = ET.parse(os.path.join(self.path, "contest.xml"))

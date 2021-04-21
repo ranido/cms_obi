@@ -1,11 +1,46 @@
 Contest Management System
 =========================
 
-Homepage: <http://cms-dev.github.io/>
-
 [![Build Status](https://travis-ci.org/cms-dev/cms.svg?branch=master)](https://travis-ci.org/cms-dev/cms)
 [![codecov](https://codecov.io/gh/cms-dev/cms/branch/master/graph/badge.svg)](https://codecov.io/gh/cms-dev/cms)
 [![Join the chat at https://gitter.im/cms-dev/cms](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cms-dev/cms?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+Homepage: <http://cms-dev.github.io/>
+
+
+Preambule
+---------
+This is a branch of the original CMS, adapted to the needs of the
+Brazilian Olympiad in Informatics (https://olimpiada.ic.unicamp.br).
+
+It implements three modifications:
+
+1) Allow different time and memory limits for different programming languages.
+   Two new JSONB columns were created in the database for the table "dataset",
+   to store a dictionary for the memory limits (column "memory_limit_lang")
+   and a dictionary for the time limits (column "time_limit_lang"). Initially,
+   for all languages, the time limit is the value of the usual "time_limit" task
+   parameter, the memory limit is the value of the usual "memory limit" task
+   parameter. Then, in the admin interface, the values for each language
+   can be set.
+   Affected files:
+      cms_obi/cms/db/base.py
+      cms_obi/cms/grading/Job.py
+      cms_obi/cms/server/admin/handlers/task.py
+      cms_obi/cms/server/admin/templates/fragments/hashed_password_form.html      
+      cms_obi/cms/server/admin/templates/task.html
+      cms_obi/cmscommon/crypto.py
+      cms_obi/cmscommon/hashers.py
+      cms_obi/cmscontrib/AddUser.py
+      
+2) Allow the use of the pbkdf2 hashing method for passwords
+   See cmsAddUser, cmsImportUser and the admin interface.
+   Affected files:
+   
+3) Put a logo in the header of the contest page
+   Affected files:
+      cms_obi/cms/server/contest/static/cws_style.css
+      
 
 Introduction
 ------------

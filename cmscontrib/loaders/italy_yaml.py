@@ -166,7 +166,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
 
         args = {}
         # ranido-begin
-        args["allowed_localizations"] = ["pt-BR",]
+        # args["allowed_localizations"] = ["pt-BR",]
         # ranido-end
 
         load(conf, args, ["name", "nome_breve"])
@@ -454,10 +454,6 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         task = Task(**args)
 
         args = {}
-        # ranido-begin
-        args["time_limit_lang"] = {}
-        args["memory_limit_lang"] = {}
-        # ranido-end
         args["task"] = task
         args["description"] = conf.get("version", "Default")
         args["autojudge"] = False
