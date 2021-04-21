@@ -378,7 +378,7 @@ class PolygonContestLoader(ContestLoader):
 
         args = {}
         # ranido-begin
-        # args["allowed_localizations"] = ["pt-BR",]
+        args["allowed_localizations"] = ["pt-BR",]
         # ranido-end
 
         tree = ET.parse(os.path.join(self.path, "contest.xml"))
