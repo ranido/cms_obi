@@ -10,7 +10,7 @@ Homepage: <http://cms-dev.github.io/>
 
 Preambule
 ---------
-This is a branch of the original CMS version 1.4rc1, adapted to the needs of the
+This is a fork of the original CMS version 1.4rc1, adapted to the needs of the
 Brazilian Olympiad in Informatics (https://olimpiada.ic.unicamp.br).
 
 It implements three modifications:
