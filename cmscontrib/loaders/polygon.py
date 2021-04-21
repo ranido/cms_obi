@@ -382,6 +382,9 @@ class PolygonContestLoader(ContestLoader):
         logger.info("Loading parameters for contest %s.", name)
 
         args = {}
+        # ranido-begin
+        args["allowed_localizations"] = ["pt-BR",]
+        # ranido-end
 
         tree = ET.parse(os.path.join(self.path, "contest.xml"))
         root = tree.getroot()

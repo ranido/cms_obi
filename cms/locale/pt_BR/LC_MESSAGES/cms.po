@@ -286,7 +286,7 @@ msgid "Please select the correct files."
 msgstr "Por favor selecione os arquivos corretos."
 
 msgid "File too big!"
-msgstr "O arquivo é demasiadamente grande!"
+msgstr "Arquivo demasiadamente grande!"
 
 #, python-format
 msgid "Each file must be at most %d bytes long."
@@ -482,7 +482,7 @@ msgid "Automatic (%(lang)s)"
 msgstr "Automática(%(lang)s)"
 
 msgid "Logout"
-msgstr "Encerrar sessão"
+msgstr "Encerrar a sessão"
 
 #, python-format
 msgid ""
@@ -499,7 +499,7 @@ msgid "Welcome"
 msgstr "Bem vindo"
 
 msgid "Please log in"
-msgstr "Por favor faça o login"
+msgstr "Por favor autentique-se"
 
 msgid "Username"
 msgstr "Usuário"

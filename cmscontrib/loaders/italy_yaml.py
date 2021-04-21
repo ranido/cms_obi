@@ -165,6 +165,9 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         touch(os.path.join(self.path, ".import_error_contest"))
 
         args = {}
+        # ranido-begin
+        args["allowed_localizations"] = ["pt-BR",]
+        # ranido-end
 
         load(conf, args, ["name", "nome_breve"])
         load(conf, args, ["description", "nome"])
@@ -451,17 +454,16 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         task = Task(**args)
 
         args = {}
+        # ranido-begin
+        args["time_limit_lang"] = {}
+        args["memory_limit_lang"] = {}
+        # ranido-end
         args["task"] = task
         args["description"] = conf.get("version", "Default")
         args["autojudge"] = False
 
         load(conf, args, ["time_limit", "timeout"], conv=float)
         load(conf, args, ["memory_limit", "memlimit"])
-
-        # ranido-begin
-        args["time_limit_lang"] = {}
-        args["memory_limit_lang"] = {}
-        # ranido-end
         
         # Builds the parameters that depend on the task type
         args["managers"] = []
