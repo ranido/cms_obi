@@ -199,6 +199,11 @@ def validate_password(authentication, password):
 
     """
 
+    # ranido-begin
+    #import logging
+    #logger = logging.getLogger(__name__)
+    #logger.info("validate_password %s  %s.", authentication, password)
+    # ranido-end
     method, payload = parse_authentication(authentication)
 
     if method == "bcrypt":

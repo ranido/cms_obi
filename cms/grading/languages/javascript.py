@@ -27,7 +27,7 @@ from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 
 from cms.grading import Language
-
+from shlex import quote as shell_quote
 
 __all__ = ["Javascript"]
 
@@ -52,10 +52,17 @@ class Javascript(Language):
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
-        return [["/bin/cp", source_filenames[0], executable_filename]]
+        command = ["/bin/sh", "-c", 
+                   "" + " ".join(["cat",
+                             "/usr/local/etc/saci/prenode.js",
+                             shell_quote(source_filenames[0]),
+                             " > ",
+                                  shell_quote(executable_filename) + ""])]
+        return [command]
 
     def get_evaluation_commands(
             self, executable_filename, main=None, args=None):
         """See Language.get_evaluation_commands."""
         args = args if args is not None else []
-        return [["/usr/bin/php", executable_filename] + args]
+        return [["/usr/bin/node", executable_filename] + args]
+
