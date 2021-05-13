@@ -755,8 +755,8 @@ msgstr ""
 "Você iniciou seu período de tempo %(start_time)s e o período de tempo já se "
 "encerrou. "
 
-#msgid "There's nothing you can do now."
-#msgstr "Não há nada que você possa fazer agora."
+msgid "There's nothing you can do now."
+msgstr "Não há nada que você possa fazer agora."
 
 msgid "You never started your time frame. Now it's too late."
 msgstr "Você não iniciou seu período de tempo. Agora é muito tarde."
