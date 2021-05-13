@@ -144,6 +144,12 @@ def main():
         "--bcrypt", dest="method", action="store_const", const="bcrypt",
         help="whether the password will be stored in bcrypt-hashed format "
              "(if omitted it will be stored in plain text)")
+    # ranido-begin
+    method_group.add_argument(
+        "--pbkdf2", dest="method", action="store_const", const="pbkdf2",
+        help="whether the password will be stored in pbkdf2-hashed format "
+             "(if omitted it will be stored in plain text)")
+    # ranido-end
 
     args = parser.parse_args()
 
