@@ -212,6 +212,18 @@ CMS.CWSUtils.prototype.format_timedelta = function(timedelta) {
     timedelta %= 60;
     var seconds = Math.floor(timedelta);
 
+    // ranido-begin
+    console.log('hours',hours);
+    if (hours > 24) {
+    	var days = Math.floor(hours / 24);
+    	hours = hours % 24;
+    	if (days == 1)  var days_str = " dia e ";
+    	else var days_str = " dias e ";
+    	return " " + days + days_str + this.two_digits(hours) + ":"
+            + this.two_digits(minutes) + ":"
+            + this.two_digits(seconds);
+    }
+    // ranido-end
     return this.two_digits(hours) + ":"
         + this.two_digits(minutes) + ":"
         + this.two_digits(seconds);

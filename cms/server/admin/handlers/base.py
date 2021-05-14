@@ -433,7 +433,6 @@ class BaseHandler(CommonRequestHandler):
         time_limit_name (string): the name of the language time limit.
 
         """
-        logger.warning("in get_time_limit_lang")
         value = self.get_argument(field, None)
         if value is None:
             return
@@ -447,7 +446,6 @@ class BaseHandler(CommonRequestHandler):
             if not 0 <= value < float("+inf"):
                 raise ValueError("Time limit out of range.")
             dest["time_limit_lang"][time_limit_name] = value
-        logger.warning("finished")
 
     def get_memory_limit_lang(self, dest, field, memory_limit_name):
         """Parse the memory limit.
@@ -459,7 +457,6 @@ class BaseHandler(CommonRequestHandler):
         field (string): the name of the argument to use.
 
         """
-        logger.warning("in get_memory_limit_lang")
         value = self.get_argument(field, None)
         if value is None:
             return
@@ -473,7 +470,6 @@ class BaseHandler(CommonRequestHandler):
             if not 0 < value:
                 raise ValueError("Invalid memory limit.")
             dest["memory_limit_lang"][memory_limit_name] = value
-        logger.warning("finished")
 
     # ranido-end
 
