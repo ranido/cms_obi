@@ -38,7 +38,7 @@ msgid "Outcome"
 msgstr "Resultado"
 
 msgid "Details"
-msgstr "Informações"
+msgstr "Detalhes"
 
 msgid "Execution time"
 msgstr "Tempo de execução"
