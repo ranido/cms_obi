@@ -38,7 +38,7 @@ msgid "Outcome"
 msgstr "Resultado"
 
 msgid "Details"
-msgstr "Informações"
+msgstr "Detalhes"
 
 msgid "Execution time"
 msgstr "Tempo de execução"
@@ -47,11 +47,11 @@ msgid "Memory used"
 msgstr "Memória usada"
 
 msgid "Score details temporarily unavailable."
-msgstr "Informações sobre a pontuação estão temporariamente indisponíveis."
+msgstr "Detalhes sobre a pontuação estão temporariamente indisponíveis."
 
 #, python-format
 msgid "Subtask %(index)s"
-msgstr "Grupo de teste %(index)s"
+msgstr "Subtarefa %(index)s"
 
 msgid "Compilation succeeded"
 msgstr "Compilação terminou sem erros."
@@ -134,7 +134,7 @@ msgid ""
 msgstr ""
 "Sua submissão levou muito tempo (de relógio) para executar. Isto pode ser "
 "causado por código indefinido, ou overflow de buffer, por exemplo. Note que "
-"neste caso o tempo de CPU mostrado nas informações sobre a submissão pode "
+"neste caso o tempo de CPU mostrado nos detalhes da submissão pode "
 "ser muito menor do que o limite de tempo."
 
 msgid "Execution killed (could be triggered by violating memory limits)"
@@ -150,7 +150,7 @@ msgid ""
 msgstr ""
 "A execução foi interrompida por um sinal. Entre outras razões, isto pode ser"
 " causado por exceder o limite de memória. Note que se esta é a razão, o uso "
-"de memória mostrado nas informações sobre a submissão se refere ao uso antes"
+"de memória mostrado nos detalhes da submissão se refere ao uso antes"
 " da alocação de memória que causou o sinal."
 
 msgid "Execution failed because the return code was nonzero"
@@ -352,7 +352,7 @@ msgid "Your test has been received and is currently being executed."
 msgstr "Seu teste foi recebido e está sendo executado."
 
 msgid "details"
-msgstr "informações"
+msgstr "detalhes"
 
 msgid "Executing..."
 msgstr "Executando..."
@@ -585,7 +585,7 @@ msgstr ""
 "Tarefa"
 
 msgid "Submission details for compilation"
-msgstr "Informações da compilação para a submissão"
+msgstr "Detalhes da compilação para a submissão"
 
 msgid "Message"
 msgstr "Mensagem"
@@ -594,7 +594,7 @@ msgid "Explanation"
 msgstr "Explicação"
 
 msgid "Submission details for evaluation"
-msgstr "Informações da avaliação para a submissão"
+msgstr "Detalhes da avaliação para a submissão"
 
 #, python-format
 msgid "Error %(status_code)s"
@@ -629,7 +629,7 @@ msgid "The contest will start at %(start_time)s and will end at %(stop_time)s."
 msgstr "A competição iniciará %(start_time)s e terminará %(stop_time)s."
 
 msgid "The contest is currently running."
-msgstr "A competição está em andamento."
+msgstr "A competição está no momento aberta para participação."
 
 #, python-format
 msgid "The contest started at %(start_time)s and will end at %(stop_time)s."
@@ -756,13 +756,13 @@ msgstr ""
 "encerrou. "
 
 msgid "There's nothing you can do now."
-msgstr "Não há nada que você possa fazer agora."
+msgstr " "
 
 msgid "You never started your time frame. Now it's too late."
 msgstr "Você não iniciou seu período de tempo. Agora é muito tarde."
 
 msgid "Start!"
-msgstr "Iniciar!"
+msgstr "Iniciar"
 
 msgid "Task overview"
 msgstr "Visão geral das tarefas"
@@ -916,7 +916,7 @@ msgid "%(lang)s"
 msgstr "%(lang)s"
 
 msgid "Some details"
-msgstr "Informações"
+msgstr "Alguns detalhes"
 
 msgid "Time limit"
 msgstr "Limite de tempo"
@@ -1035,7 +1035,7 @@ msgid "no submissions yet"
 msgstr "ainda não há submissões"
 
 msgid "Submission details"
-msgstr "Informações sobre a submissão"
+msgstr "Detalhes sobre a submissão"
 
 msgid "Close"
 msgstr "Fechar"
@@ -1063,7 +1063,7 @@ msgid "no tests yet"
 msgstr "ainda não há testes"
 
 msgid "Test details"
-msgstr "Informações sobre o teste"
+msgstr "Detalhes sobre o teste"
 
 msgid "Evaluation outcome"
 msgstr "Resultado da avaliação"
