@@ -70,4 +70,3 @@ class Javascript(Language):
         """See Language.get_evaluation_commands."""
         args = args if args is not None else []
         return [["/usr/bin/nodejs", executable_filename] + args]
-
