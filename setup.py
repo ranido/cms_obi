@@ -157,6 +157,7 @@ setup(
             "cmsAddParticipation=cmscontrib.AddParticipation:main",
             "cmsAddStatement=cmscontrib.AddStatement:main",
             "cmsAddSubmission=cmscontrib.AddSubmission:main",
+            "cmsAddSubmissionOBI=cmscontrib.AddSubmissionOBI:main",
             "cmsAddTeam=cmscontrib.AddTeam:main",
             "cmsAddTestcases=cmscontrib.AddTestcases:main",
             "cmsAddUser=cmscontrib.AddUser:main",
