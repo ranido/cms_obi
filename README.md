@@ -138,4 +138,3 @@ find an updated list at <http://cms-dev.github.io/testimonials.html>.
 If you used CMS for a contest, selection, or a similar event, and want
 to publicize this information, we would be more than happy to hear
 from you and add it to that list.
-

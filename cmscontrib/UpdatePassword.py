@@ -41,7 +41,7 @@ import logging
 import sys
 
 from cms import utf8_decoder
-from cms.db import SessionGen, User
+from cms.db import SessionGen, User, Participation
 from cmscommon.crypto import generate_random_password, build_password, \
     hash_password
 
@@ -53,6 +53,7 @@ logger = logging.getLogger(__name__)
 
 def update_password(username, password, method, is_hashed):
     logger.info("Updating user password in the database.")
+    logger.info("password = %s " % (password))
 
     if password is None:
         return False
@@ -78,9 +79,13 @@ def update_password(username, password, method, is_hashed):
 
         session.query(User).filter(User.username == username).\
             update({"password": stored_password}, synchronize_session="fetch")
+        session.query(Participation).filter(Participation.user_id == user.id).\
+            update({"password": stored_password}, synchronize_session="fetch")
+
         session.commit()
 
     logger.info("User %s password updated, method=%s. " % (username, method))
+    logger.info("Stored password = %s " % (stored_password))
     return True
 
 def main():

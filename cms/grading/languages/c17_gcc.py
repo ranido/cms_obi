@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2016-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Javascript programming language definition."""
+"""C programming language definition."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -26,47 +26,47 @@ from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 
-from cms.grading import Language
-from shlex import quote as shell_quote
-
-__all__ = ["Javascript"]
+from cms.grading import CompiledLanguage
 
 
-class Javascript(Language):
-    """This defines the Javascript programming language, interpreted with the
-    standard Javascript interpret available in the system.
+__all__ = ["C17Gcc"]
+
+
+class C17Gcc(CompiledLanguage):
+    """This defines the C programming language, compiled with gcc (the
+    version available on the system) using the C17 standard.
 
     """
 
     @property
     def name(self):
         """See Language.name."""
-        return "Javascript"
-
-    @property
-    def requires_multithreading(self):
-        """See Language.requires_multithreading."""
-        return True
+        return "C17 / gcc"
 
     @property
     def source_extensions(self):
         """See Language.source_extensions."""
-        return [".js"]
+        return [".c"]
+
+    @property
+    def header_extensions(self):
+        """See Language.source_extensions."""
+        return [".h"]
+
+    @property
+    def object_extensions(self):
+        """See Language.source_extensions."""
+        return [".o"]
 
     def get_compilation_commands(self,
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
-        command = ["/bin/sh", "-c", 
-                   "" + " ".join(["cat",
-                             "/usr/local/etc/saci/prenode.js",
-                             shell_quote(source_filenames[0]),
-                             " > ",
-                                  shell_quote(executable_filename) + ""])]
+        command = ["/usr/bin/gcc"]
+        if for_evaluation:
+            command += ["-DEVAL"]
+        command += ["-std=gnu17", "-O2", "-pipe", "-static",
+                    "-s", "-o", executable_filename]
+        command += source_filenames
+        command += ["-lm"]
         return [command]
-
-    def get_evaluation_commands(
-            self, executable_filename, main=None, args=None):
-        """See Language.get_evaluation_commands."""
-        args = args if args is not None else []
-        return [["/usr/local/bin/node", executable_filename] + args]

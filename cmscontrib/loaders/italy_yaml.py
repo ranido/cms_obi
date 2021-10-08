@@ -166,7 +166,8 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
 
         args = {}
         # ranido-begin
-        # args["allowed_localizations"] = ["pt-BR",]
+        args["allowed_localizations"] = ["pt-BR",]
+        args["languages"] = ["C++17 / g++", "C17 / gcc", "Pascal / fpc", "Javascript", "Java / JDK", "Python 3 / CPython", ]
         # ranido-end
 
         load(conf, args, ["name", "nome_breve"])
@@ -226,8 +227,14 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
 
         tasks = load(conf, None, ["tasks", "problemi"])
         participations = load(conf, None, ["users", "utenti"])
+        # ranido-begin
+        args_tmp = {}
+        load(conf, args_tmp, "password_method")
+        if "password_method" not in args_tmp:
+            args_tmp['password_method'] = 'plaintext'
         for p in participations:
-            p["password"] = build_password(p["password"])
+            p["password"] = build_password(p['password'], args_tmp['password_method'])
+        # ranido-end
 
         # Import was successful
         os.remove(os.path.join(self.path, ".import_error_contest"))
@@ -264,7 +271,14 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             return None
 
         load(conf, args, "username")
-        load(conf, args, "password", conv=build_password)
+        # ranido-begin
+        args_tmp = {}
+        load(conf, args_tmp, "password_method")
+        if "password_method" not in args_tmp:
+            args_tmp['password_method'] = 'plaintext'
+        load(conf, args, "password")
+        args['password'] = build_password(args['password'], args_tmp['password_method'])
+        # ranido-end
 
         load(conf, args, ["first_name", "nome"])
         load(conf, args, ["last_name", "cognome"])

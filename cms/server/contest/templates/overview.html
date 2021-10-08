@@ -196,9 +196,10 @@
 	    {# ranido-begin
             <th>{% trans %}Time limit{% endtrans %}</th>
             <th>{% trans %}Memory limit{% endtrans %}</th>
-	    ranido-end #}
             <th>{% trans %}Type{% endtrans %}</th>
+	    ranido-end #}
             <th>{% trans %}Files{% endtrans %}</th>
+
 {% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED %}
             <th>{% trans %}Tokens{% endtrans %}</th>
 {% endif %}
@@ -225,8 +226,8 @@
         {% trans %}N/A{% endtrans %}
     {% endif %}
             </td>
-    ranido-end #}
             <td>{{ get_task_type(dataset=t_iter.active_dataset).name }}</td>
+    ranido-end #}
             <td>{{ t_iter.submission_format|map("replace", ".%l", extensions)|join(" ") }}</td>
     {% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED %}
             <td>
@@ -243,5 +244,22 @@
 </table>
 {% endif %}
 
+{# ranido-begin #}
+<p>Para soluções em Java, o nome do arquivo deve ser <em>xxxx.java</em> e o nome da classe principal
+  deve ser <em>xxxx</em>, onde <em>xxxx</em> é o identificador
+  da tarefa {% if actual_phase == 0 or actual_phase == 3 %} (primeira coluna à esquerda na tabela acima){% endif %}. Note que todas as letras de <em>xxxx</em>
+  são minúsculas.
+</p>
+<p>Veja instruções para submissão e exemplos de soluções nas diferentes linguagens:
+  <ul>
+    <li><a target="_blank" href="https://olimpiada.ic.unicamp.br/pratique/exemplo_solucao_c">C</a></li>
+    <li><a target="_blank" href="https://olimpiada.ic.unicamp.br/pratique/exemplo_solucao_cpp">C++</a></li>
+    <li><a target="_blank" href="https://olimpiada.ic.unicamp.br/pratique/exemplo_solucao_py3">Python3</a></li>
+    <li><a target="_blank" href="https://olimpiada.ic.unicamp.br/pratique/exemplo_solucao_cms_java">Java</a></li>
+    <li><a target="_blank" href="https://olimpiada.ic.unicamp.br/pratique/exemplo_solucao_js">Javascript</a></li>
+    <li><a target="_blank" href="https://olimpiada.ic.unicamp.br/pratique/exemplo_solucao_pas">Pascal</a></li>
+  </ul>
+</p>
+{# ranido-end #}
 </div>
 {% endblock core %}
