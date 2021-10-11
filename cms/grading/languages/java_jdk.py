@@ -38,6 +38,11 @@ else:
 from cms.grading import Language
 
 
+# ranido-begin
+import logging
+logger = logging.getLogger(__name__)
+# ranido-end
+
 __all__ = ["JavaJDK"]
 
 
@@ -68,30 +73,49 @@ class JavaJDK(Language):
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
+
+        # ranido-begin
+        copy_command = ["/bin/cp", source_filenames[0], 'solucao.java']
+        source_filenames = ['solucao.java']
+        # ranido-end
+        
         compile_command = ["/usr/bin/javac"] + source_filenames
         # We need to let the shell expand *.class as javac create
         # a class file for each inner class.
+
         if JavaJDK.USE_JAR:
             jar_command = ["/bin/sh", "-c",
                            " ".join(["jar", "cf",
                                      shell_quote(executable_filename),
                                      "*.class"])]
-            return [compile_command, jar_command]
+            # ranido-begin
+            #return [compile_command, jar_command]
+            return [copy_command, compile_command, jar_command]
+            # ranido-end
         else:
             zip_command = ["/bin/sh", "-c",
                            " ".join(["zip", "-r", "-", "*.class", ">",
                                      shell_quote(executable_filename)])]
-            return [compile_command, zip_command]
+            # ranido-begin
+            #return [compile_command, zip_command]
+            return [copy_command, compile_command, zip_command]
+            # ranido-end
 
     def get_evaluation_commands(
             self, executable_filename, main=None, args=None):
         """See Language.get_evaluation_commands."""
+
+        # ranido-begin
+        main = 'solucao'
+        # ranido-end
+
         args = args if args is not None else []
+
         if JavaJDK.USE_JAR:
             # executable_filename is a jar file, main is the name of
             # the main java class
             return [["/usr/bin/java", "-Deval=true", "-Xmx512M", "-Xss64M",
-                     "-cp", executable_filename, main] + args]
+                     "-cp", executable_filename, main] + args] 
         else:
             unzip_command = ["/usr/bin/unzip", executable_filename]
             command = ["/usr/bin/java", "-Deval=true", "-Xmx512M", "-Xss64M",

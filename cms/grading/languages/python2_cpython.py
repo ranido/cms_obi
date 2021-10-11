@@ -51,7 +51,10 @@ class Python2CPython(CompiledLanguage):
     @property
     def source_extensions(self):
         """See Language.source_extensions."""
-        return [".py"]
+        # ranido-begin
+        #return [".py"]
+        return [".py2"]
+        # ranido-end
 
     def get_compilation_commands(self,
                                  source_filenames, executable_filename,

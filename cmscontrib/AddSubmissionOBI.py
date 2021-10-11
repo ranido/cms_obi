@@ -68,6 +68,7 @@ def language_from_submitted_files(files):
     language = None
     for filename in iterkeys(files):
         this_language = filename_to_language(files[filename])
+        print('this_language',this_language)
         if this_language is None and ".%l" in filename:
             raise ValueError(
                 "Cannot recognize language for file `%s'." % filename)
