@@ -39,6 +39,7 @@ from cms.grading import Language
 
 
 # ranido-begin
+import os
 import logging
 logger = logging.getLogger(__name__)
 # ranido-end
@@ -75,8 +76,20 @@ class JavaJDK(Language):
         """See Language.get_compilation_commands."""
 
         # ranido-begin
-        copy_command = ["/bin/cp", source_filenames[0], 'solucao.java']
-        source_filenames = ['solucao.java']
+        changed_name = False
+        logger.info("+++++++++ java source_file=%s", source_filenames[0])
+        tmp,ext = os.path.splitext(source_filenames[0])
+        if tmp.find('_'):
+            logger.info("+++++++++ java tmp=%s, ext=%s", tmp,ext)
+            tmp = tmp.split('_')
+            new_name = tmp[-1] + '.java'
+            logger.info("************ newname=%s", new_name)
+            if new_name != source_filenames[0]:
+                copy_command = ["/bin/cp", source_filenames[0], new_name]
+                source_filenames = [new_name]
+                logger.info("************ java source_file=%s", source_filenames[0])
+                logger.info("************ java using source_file=%s", new_name)
+                changed_name = True
         # ranido-end
         
         compile_command = ["/usr/bin/javac"] + source_filenames
@@ -89,16 +102,24 @@ class JavaJDK(Language):
                                      shell_quote(executable_filename),
                                      "*.class"])]
             # ranido-begin
-            #return [compile_command, jar_command]
-            return [copy_command, compile_command, jar_command]
+            if changed_name:
+                logger.info("************ return copy_command=%s", str(copy_command))
+                return [copy_command, compile_command, jar_command]
+            else:
+                logger.info("************ return compile_command without copy")
+                return [compile_command, jar_command]
             # ranido-end
         else:
             zip_command = ["/bin/sh", "-c",
                            " ".join(["zip", "-r", "-", "*.class", ">",
                                      shell_quote(executable_filename)])]
             # ranido-begin
-            #return [compile_command, zip_command]
-            return [copy_command, compile_command, zip_command]
+            if changed_name:
+                logger.info("************ return copy_command=%s", str(copy_command))
+                return [copy_command, compile_command, zip_command]
+            else:
+                logger.info("************ return compile_command without copy")
+                return [compile_command, zip_command]
             # ranido-end
 
     def get_evaluation_commands(
@@ -106,7 +127,13 @@ class JavaJDK(Language):
         """See Language.get_evaluation_commands."""
 
         # ranido-begin
-        main = 'solucao'
+        #main = 'solucao'
+        tmp = executable_filename
+        if tmp.find('_') > 0:
+            logger.info("************ java main=%s", main)
+            tmp = tmp.split('_')
+            main = tmp[-1]
+            logger.info("************ java using main=%s", main)
         # ranido-end
 
         args = args if args is not None else []

@@ -33,6 +33,10 @@ import argparse
 import logging
 import sys
 
+# ranido-begin
+from time import sleep
+# ranido-end
+
 from cms import utf8_decoder, ServiceCoord
 from cms.db import File, Participation, SessionGen, Submission, Task, User, \
     ask_for_contest
@@ -46,11 +50,18 @@ logger = logging.getLogger(__name__)
 
 def maybe_send_notification(submission_id):
     """Non-blocking attempt to notify a running ES of the submission"""
-    rs = RemoteServiceClient(ServiceCoord("EvaluationService", 0),auto_retry=10)
-    rs.connect()
-    result = rs.new_submission(submission_id=submission_id)
-    rs.disconnect()
-    print("ID:{}".format(submission_id))
+
+    for t in range(10):
+        try:
+            rs = RemoteServiceClient(ServiceCoord("EvaluationService", 0),auto_retry=10)
+            rs.connect()
+            result = rs.new_submission(submission_id=submission_id)
+            rs.disconnect()
+            print("ID:{}".format(submission_id))
+            break
+        except:
+            sleep(0.5)
+    
 
 def language_from_submitted_files(files):
     """Return the language inferred from the submitted files.
