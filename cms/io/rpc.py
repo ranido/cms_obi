@@ -627,6 +627,11 @@ class RemoteServiceClient(RemoteServiceBase):
             result.set_exception(RPCError("JSON encoding failed."))
             return result
 
+        # ranido-begin
+        if not self.connected:
+            self._connect()
+        # ranido-end
+
         # Send it.
         try:
             self._write(data)
