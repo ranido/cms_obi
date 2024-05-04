@@ -198,9 +198,9 @@ setup(
         ],
         "cms.grading.languages": [
             "C++17 / g++=cms.grading.languages.cpp17_gpp:Cpp17Gpp",
-            #"C++11 / g++=cms.grading.languages.cpp11_gpp:Cpp11Gpp",
+            "C++11 / g++=cms.grading.languages.cpp11_gpp:Cpp11Gpp",
             "C17 / gcc=cms.grading.languages.c17_gcc:C17Gcc",
-            #"C11 / gcc=cms.grading.languages.c11_gcc:C11Gcc",
+            "C11 / gcc=cms.grading.languages.c11_gcc:C11Gcc",
             #"C# / Mono=cms.grading.languages.csharp_mono:CSharpMono",
             #"Haskell / ghc=cms.grading.languages.haskell_ghc:HaskellGhc",
             "Java / JDK=cms.grading.languages.java_jdk:JavaJDK",

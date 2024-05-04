@@ -48,8 +48,8 @@ from cmstestsuite.Test import Test, CheckOverallScore, CheckCompilationFail, \
     CheckTimeout, CheckTimeoutWall, CheckNonzeroReturn
 
 
-LANG_CPP = "C++11 / g++"
-LANG_C = "C11 / gcc"
+LANG_CPP = "C++17 / g++"
+LANG_C = "C17 / gcc"
 LANG_HS = "Haskell / ghc"
 LANG_JAVA = "Java / JDK"
 LANG_PASCAL = "Pascal / fpc"

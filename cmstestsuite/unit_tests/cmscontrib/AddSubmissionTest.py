@@ -52,7 +52,7 @@ _DIGEST_3 = bytes_digest(_CONTENT_3)
 _FILENAME_1 = "file.c"
 _FILENAME_2 = "file"
 _FILENAME_3 = "file.py"
-_LANGUAGE_1 = "C11 / gcc"
+_LANGUAGE_1 = "C17 / gcc"
 
 
 class TestAddSubmissionMixin(DatabaseMixin, FileSystemMixin):
