@@ -38,6 +38,7 @@ import json
 import logging
 from datetime import timedelta
 
+from sqlalchemy import update
 from sqlalchemy.orm import contains_eager, joinedload
 
 from cms import config
@@ -136,11 +137,35 @@ def validate_login(
         log_failed_attempt("wrong password")
         return None, None
 
-    if contest.ip_restriction and participation.ip is not None \
-            and not any(ip_address in network for network in participation.ip):
-        log_failed_attempt("unauthorized IP address")
-        return None, None
+    # ranido-begin
+    
+    # if contest.ip_restriction and participation.ip is not None \
+    #         and not any(ip_address in network for network in participation.ip):
+    #     log_failed_attempt("unauthorized IP address")
+    #     return None, None
+    
+    logger.info("Attempt login from IP address %s, as user %r, on "
+                "contest %s, at %s", ip_address, username, contest.name,
+                timestamp)
 
+    if contest.ip_restriction:
+        if participation.ip is None:
+            #first time, fix the contestant ip
+            logger.info("First login from IP address %s, as user %r, on "
+                "contest %s, at %s", ip_address, username, contest.name,
+                timestamp)
+
+            ip_address = ((str(ip_address)),)
+            sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
+            sql_session.commit()
+            
+            logger.info(f"saved {participation.ip}")
+        elif not any(ip_address in network for network in participation.ip):
+                log_failed_attempt("unauthorized IP address")
+                return None, None
+
+    # ranido-end
+    
     if contest.block_hidden_participations and participation.hidden:
         log_failed_attempt("participation is hidden and unauthorized")
         return None, None
@@ -228,6 +253,36 @@ def authenticate_request(
             ip_address, contest.name, participation.user.username, timestamp)
         return None, None
 
+    # ranido-begin
+    
+    # if contest.ip_restriction and participation.ip is not None \
+    #         and not any(ip_address in network for network in participation.ip):
+    #     log_failed_attempt("unauthorized IP address")
+    #     return None, None
+    
+    logger.info("Attempt login from IP address %s, as user %r, on "
+                "contest %s, at %s", ip_address, participation.user.username, contest.name,
+                timestamp)
+
+    if contest.ip_restriction:
+        if participation.ip is None:
+            #first time, fix the contestant ip
+            logger.info("First login from IP address %s, as user %r, on "
+                "contest %s, at %s", ip_address, participation.user.username, contest.name,
+                timestamp)
+
+            ip_address = ((str(ip_address)),)
+            sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
+            sql_session.commit()
+            
+            logger.info(f"saved {participation.ip}")
+        elif not any(ip_address in network for network in participation.ip):
+                log_failed_attempt("unauthorized IP address")
+                return None, None
+
+    # ranido-end
+    
+    
     # Check that the user is not hidden if hidden users are blocked.
     if contest.block_hidden_participations and participation.hidden:
         logger.info(
@@ -255,6 +310,12 @@ def _authenticate_request_by_ip_address(sql_session, contest, ip_address):
         matching the remote IP address.
 
     """
+
+    # ranido-begin
+    return None
+    # ranido-end
+
+    
     # We encode it as a network (i.e., we assign it a /32 or /128 mask)
     # since we're comparing it for equality with other networks.
     ip_network = ipaddress.ip_network((ip_address, ip_address.max_prefixlen))
@@ -311,6 +372,11 @@ def _authenticate_request_from_cookie(sql_session, contest, timestamp, cookie):
         None in case of errors.
 
     """
+
+    # ranido-begin
+    #return None, None
+    # ranido-end
+    
     if cookie is None:
         logger.info("Unsuccessful cookie authentication: no cookie provided")
         return None, None

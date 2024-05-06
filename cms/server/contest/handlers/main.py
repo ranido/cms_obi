@@ -94,15 +94,36 @@ class LoginHandler(ContestHandler):
         username = self.get_argument("username", "")
         password = self.get_argument("password", "")
 
+        # ranido-begin
+        # sometimes your application will be behind a proxy, for example if
+        # you use nginx and UWSGI and you will always get something like 127.0.0.1
+        # for the remote IP. In this case you need to check the headers too
+
+        # old code
+        # try:
+        #     # In py2 Tornado gives us the IP address as a native binary
+        #     # string, whereas ipaddress wants text (unicode) strings.
+        #     ip_address = ipaddress.ip_address(str(self.request.remote_ip))
+        # except ValueError:
+        #     logger.warning("Invalid IP address provided by Tornado: %s",
+        #                    self.request.remote_ip)
+        #     return None
+
+        # new code
         try:
             # In py2 Tornado gives us the IP address as a native binary
             # string, whereas ipaddress wants text (unicode) strings.
             ip_address = ipaddress.ip_address(str(self.request.remote_ip))
+            real_ip = self.request.headers.get("X-Real-IP") or \
+                self.request.headers.get("X-Forwarded-For") or \
+                self.request.remote_ip
+            ip_address = ipaddress.ip_address(str(real_ip))
+            # ranido-end
         except ValueError:
             logger.warning("Invalid IP address provided by Tornado: %s",
-                           self.request.remote_ip)
-            return None
-
+                           real_ip)
+        # ranido-end
+        
         participation, cookie = validate_login(
             self.sql_session, self.contest, self.timestamp, username, password,
             ip_address)
