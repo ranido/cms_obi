@@ -155,7 +155,10 @@ class RemoteServiceBase(object):
 
         """
         if self.connected:
-            raise RuntimeError("Already connected.")
+            #raise RuntimeError("Already connected.")
+            # ranido-begin
+            return
+            # ranido-end
 
         self._socket = sock
         self._reader = self._socket.makefile('rb')
