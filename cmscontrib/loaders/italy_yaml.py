@@ -167,7 +167,8 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         args = {}
         # ranido-begin
         args["allowed_localizations"] = ["pt-BR",]
-        args["languages"] = ["C++17 / g++", "C17 / gcc", "Pascal / fpc", "Javascript", "Java / JDK", "Python 3 / CPython", ]
+        #args["languages"] = ["C++17 / g++", "C17 / gcc", "Pascal / fpc", "Javascript", "Java / JDK", "Python 3 / CPython", ]
+        args["languages"] = ["C++17 / g++", "C17 / gcc", "Javascript", "Java / JDK", "Python 3 / CPython", ]
         # ranido-end
 
         load(conf, args, ["name", "nome_breve"])

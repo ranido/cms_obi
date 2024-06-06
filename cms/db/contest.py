@@ -105,7 +105,12 @@ class Contest(Base):
     allow_user_tests = Column(
         Boolean,
         nullable=False,
-        default=True)
+        # ranido-begin
+
+        #default=True)
+        default=False)
+
+        # ranido-end
 
     # Whether to prevent hidden participations to log in.
     block_hidden_participations = Column(
@@ -222,7 +227,11 @@ class Contest(Base):
     # "Europe/Rome", "Australia/Sydney", "America/New_York", etc.
     timezone = Column(
         Unicode,
-        nullable=True)
+        nullable=True,
+        # ranido-begin
+        default="America/Sao_Paulo"
+        # ranido-end
+    )
 
     # Max contest time for each user in seconds.
     per_user_time = Column(
