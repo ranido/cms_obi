@@ -13,7 +13,11 @@
 <h2>{% trans %}General information{% endtrans %}</h2>
 <div class="row">
     <div class="{% if contest.per_user_time is not none %}span5{% else %}span9{% endif %}">
-        <p>
+
+      <h4>Veja a <a href="{{ url("static", "FolhaInformacoes.pdf") }}" target="_blank">Folha de Informações</a> antes de iniciar a prova.</h4>
+      <p>&nbsp</p>
+
+    <p>
 {% if phase == -1 %}
         {% trans %}The contest hasn't started yet.{% endtrans %}
         </p>
@@ -249,8 +253,6 @@
   da tarefa {% if actual_phase == 0 or actual_phase == 3 %} (primeira coluna à esquerda na tabela acima){% endif %}. Note que todas as letras de <em>xxxx</em>
   são minúsculas.
 </p>
-<p>Veja a <a href="{{ url("static", "FolhaInformacoes.pdf") }}" target="_blank">Folha de Informações</a> sobre a prova.
-
 {#
 <p>Veja instruções para submissão e exemplos de soluções nas diferentes linguagens:
   <ul>
