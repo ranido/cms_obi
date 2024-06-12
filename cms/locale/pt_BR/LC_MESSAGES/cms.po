@@ -725,7 +725,7 @@ msgstr ""
 
 msgid "As soon as the contest starts you can choose to start your time frame."
 msgstr ""
-"Assim que a período de prova iniciar você pode escolher iniciar sua prova. "
+"Assim que o período de prova iniciar você pode escolher iniciar sua prova. "
 
 
 msgid ""
