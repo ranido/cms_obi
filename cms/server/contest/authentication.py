@@ -148,21 +148,26 @@ def validate_login(
                 "contest %s, at %s", ip_address, username, contest.name,
                 timestamp)
 
-    if contest.ip_restriction:
-        if participation.ip is None:
-            #first time, fix the contestant ip
-            logger.info("First login from IP address %s, as user %r, on "
-                "contest %s, at %s", ip_address, username, contest.name,
-                timestamp)
+    if participation.ip is None:
+        #first time, fix the contestant ip
+        logger.info("First login from IP address %s, as user %r, on "
+                    "contest %s, at %s", ip_address, username, contest.name,
+                    timestamp)
+    else:
+        logger.info("NEW login from IP address %s, as user %r, on "
+                    "contest %s, at %s", ip_address, username, contest.name,
+                    timestamp)
 
-            ip_address = ((str(ip_address)),)
-            sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
-            sql_session.commit()
-            
-            logger.info(f"saved {participation.ip}")
-        elif not any(ip_address in network for network in participation.ip):
-                log_failed_attempt("unauthorized IP address")
-                return None, None
+
+    ip_address = ((str(ip_address)),)
+    sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
+    sql_session.commit()
+    logger.info(f"saved IP, {participation.ip}")
+        
+    # if contest.ip_restriction:
+    #     if not any(ip_address in network for network in participation.ip):
+    #         log_failed_attempt("unauthorized IP address")
+    #         return None, None
 
     # ranido-end
     
@@ -259,26 +264,32 @@ def authenticate_request(
     #         and not any(ip_address in network for network in participation.ip):
     #     log_failed_attempt("unauthorized IP address")
     #     return None, None
-    
+
     logger.info("Attempt login from IP address %s, as user %r, on "
                 "contest %s, at %s", ip_address, participation.user.username, contest.name,
                 timestamp)
 
-    if contest.ip_restriction:
-        if participation.ip is None:
-            #first time, fix the contestant ip
-            logger.info("First login from IP address %s, as user %r, on "
-                "contest %s, at %s", ip_address, participation.user.username, contest.name,
-                timestamp)
+    if participation.ip is None:
+        #first time, fix the contestant ip
+        logger.info("First login from IP address %s, as user %r, on "
+                    "contest %s, at %s", ip_address, participation.user.username, contest.name,
+                    timestamp)
+    else:
+        logger.info("NEW login from IP address %s, as user %r, on "
+                    "contest %s, at %s", ip_address, participation.user.username, contest.name,
+                    timestamp)
 
-            ip_address = ((str(ip_address)),)
-            sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
-            sql_session.commit()
-            
-            logger.info(f"saved {participation.ip}")
-        elif not any(ip_address in network for network in participation.ip):
-                log_failed_attempt("unauthorized IP address")
-                return None, None
+
+    ip_address = ((str(ip_address)),)
+    sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
+    sql_session.commit()
+    logger.info(f"saved IP, {participation.ip}")
+
+    # if contest.ip_restriction:
+    #     if not any(ip_address in network for network in participation.ip):
+    #         log_failed_attempt("unauthorized IP address")
+    #         return None, None
+
 
     # ranido-end
     
