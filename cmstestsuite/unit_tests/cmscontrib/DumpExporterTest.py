@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,35 +18,24 @@
 
 """Tests for the DumpExporter script"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import assertCountEqual, iteritems, itervalues
-
 import json
-import io
 import os
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
-from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
 
 from cms.db import Contest, Executable, Participation, Statement, Submission, \
     SubmissionResult, Task, User, version
-
 from cmscommon.digest import bytes_digest
-
 from cmscontrib.DumpExporter import DumpExporter
+from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
 
 
 class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestDumpExporter, self).setUp()
+        super().setUp()
 
         self.target = self.get_path("target")
         self.dump = None
@@ -94,10 +82,10 @@ class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
 
     def tearDown(self):
         self.delete_data()
-        super(TestDumpExporter, self).tearDown()
+        super().tearDown()
 
     def do_export(self, contest_ids, dump_files=True, skip_generated=False,
-                  skip_submissions=False):
+                  skip_submissions=False, skip_users=False):
         """Create an exporter and call do_export in a convenient way"""
         r = DumpExporter(
             contest_ids,
@@ -107,10 +95,11 @@ class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             skip_generated=skip_generated,
             skip_submissions=skip_submissions,
             skip_user_tests=False,
+            skip_users=skip_users,
             skip_print_jobs=False).do_export()
         dump_path = os.path.join(self.target, "contest.json")
         try:
-            with io.open(dump_path, "rt", encoding="utf-8") as f:
+            with open(dump_path, "rt", encoding="utf-8") as f:
                 self.dump = json.load(f)
         except Exception:
             self.dump = None
@@ -128,9 +117,9 @@ class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         raise (AssertionError): if the object is not in the dump.
 
         """
-        for key, obj in iteritems(self.dump):
+        for key, obj in self.dump.items():
             if isinstance(obj, dict) and obj["_class"] == cls.__name__ and \
-                    all(obj[k] == v for k, v in iteritems(kwargs)):
+                    all(obj[k] == v for k, v in kwargs.items()):
                 return key
         raise AssertionError("Cannot find object of class %s with fields %s" %
                              (cls.__name__, kwargs))
@@ -144,9 +133,9 @@ class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         raise (AssertionError): if the object is in the dump.
 
         """
-        for obj in itervalues(self.dump):
+        for obj in self.dump.values():
             if isinstance(obj, dict) and obj["_class"] == cls.__name__ and \
-                    all(obj[k] == v for k, v in iteritems(kwargs)):
+                    all(obj[k] == v for k, v in kwargs.items()):
                 raise AssertionError("Object of class %s with fields %s "
                                      "should not appear in the dump" %
                                      (cls.__name__, kwargs))
@@ -154,7 +143,7 @@ class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
     def assertFileInDump(self, digest, content):
         path = os.path.join(self.target, "files", digest)
         self.assertTrue(os.path.exists(path))
-        with io.open(path, "rb") as f:
+        with open(path, "rb") as f:
             self.assertEqual(content, f.read())
 
     def assertFileNotInDump(self, digest):
@@ -162,10 +151,10 @@ class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         self.assertFalse(os.path.exists(path))
 
     def test_dont_overwrite(self):
-        with io.open(self.target, "wt", encoding="utf-8") as f:
+        with open(self.target, "wt", encoding="utf-8") as f:
             f.write("hello!")
         self.assertFalse(self.do_export(None))
-        with io.open(self.target, "rt") as f:
+        with open(self.target, "rt") as f:
             self.assertEqual(f.read(), "hello!")
 
     def test_export_all(self):
@@ -200,9 +189,9 @@ class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         self.assertFileInDump(self.file_digest, self.file_content)
 
         # Root objects are the contests, the users, and unattached tasks.
-        assertCountEqual(self, self.dump["_objects"],
-                         [contest_key, other_contest_key, user_key,
-                          unattached_task_key, unattached_user_key])
+        self.assertCountEqual(self.dump["_objects"],
+                              [contest_key, other_contest_key, user_key,
+                               unattached_task_key, unattached_user_key])
         self.assertEqual(self.dump["_version"], version)
 
     def test_export_single_contest(self):
@@ -279,6 +268,25 @@ class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         self.assertFileInDump(self.file_digest, self.file_content)
 
         self.assertNotInDump(SubmissionResult)
+        self.assertFileNotInDump(self.exe_digest)
+
+    def test_skip_users(self):
+        """Test skipping users.
+
+        Should not export users and depending objects.
+        Should still export contest, tasks and their depending objects.
+
+        """
+        self.assertTrue(self.do_export(None, skip_users=True))
+
+        self.assertInDump(Statement, digest=self.st_digest)
+        self.assertFileInDump(self.st_digest, self.st_content)
+
+        self.assertNotInDump(User)
+        self.assertNotInDump(Participation)
+        self.assertNotInDump(Submission)
+        self.assertNotInDump(SubmissionResult)
+        self.assertFileNotInDump(self.file_digest)
         self.assertFileNotInDump(self.exe_digest)
 
 

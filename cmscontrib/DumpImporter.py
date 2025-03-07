@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -29,27 +28,17 @@ again should be idempotent.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
 gevent.monkey.patch_all()  # noqa
 
 import argparse
-import io
 import ipaddress
 import json
 import logging
 import os
 import sys
-
 from datetime import datetime, timedelta
 
 from sqlalchemy.types import \
@@ -57,14 +46,12 @@ from sqlalchemy.types import \
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR, JSONB
 
 import cms.db as class_hook
-
 from cms import utf8_decoder
 from cms.db import version as model_version, Codename, Filename, \
-    FilenameSchema, FilenameSchemaArray, Digest
-from cms.db import SessionGen, Contest, Submission, SubmissionResult, \
-    UserTest, UserTestResult, PrintJob, init_db, drop_db, enumerate_files
+    FilenameSchema, FilenameSchemaArray, Digest, SessionGen, Contest, \
+    Submission, SubmissionResult, User, Participation, UserTest, \
+    UserTestResult, PrintJob, Announcement, init_db, drop_db, enumerate_files
 from cms.db.filecacher import FileCacher
-
 from cmscommon.archive import Archive
 from cmscommon.datetime import make_datetime
 from cmscommon.digest import path_digest
@@ -131,7 +118,7 @@ def decode_value(type_, value):
             "Unknown SQLAlchemy column type: %s" % type_)
 
 
-class DumpImporter(object):
+class DumpImporter:
 
     """This service imports data from a directory that has been
     the target of a DumpExport. The process of exporting and
@@ -141,13 +128,14 @@ class DumpImporter(object):
 
     def __init__(self, drop, import_source,
                  load_files, load_model, skip_generated,
-                 skip_submissions, skip_user_tests, skip_print_jobs):
+                 skip_submissions, skip_user_tests, skip_users, skip_print_jobs):
         self.drop = drop
         self.load_files = load_files
         self.load_model = load_model
         self.skip_generated = skip_generated
         self.skip_submissions = skip_submissions
         self.skip_user_tests = skip_user_tests
+        self.skip_users = skip_users
         self.skip_print_jobs = skip_print_jobs
 
         self.import_source = import_source
@@ -191,8 +179,8 @@ class DumpImporter(object):
             if self.load_model:
                 logger.info("Importing the contest from a JSON file.")
 
-                with io.open(os.path.join(self.import_dir,
-                                          "contest.json"), "rb") as fin:
+                with open(os.path.join(self.import_dir,
+                                       "contest.json"), "rb") as fin:
                     # TODO - Throughout all the code we'll assume the
                     # input is correct without actually doing any
                     # validations.  Thus, for example, we're not
@@ -243,31 +231,38 @@ class DumpImporter(object):
                 assert self.datas["_version"] == model_version
 
                 self.objs = dict()
-                for id_, data in iteritems(self.datas):
+                for id_, data in self.datas.items():
                     if not id_.startswith("_"):
                         self.objs[id_] = self.import_object(data)
-                for id_, data in iteritems(self.datas):
-                    if not id_.startswith("_"):
-                        self.add_relationships(data, self.objs[id_])
 
-                for k, v in list(iteritems(self.objs)):
+                for k, v in list(self.objs.items()):
 
                     # Skip submissions if requested
                     if self.skip_submissions and isinstance(v, Submission):
                         del self.objs[k]
 
                     # Skip user_tests if requested
-                    if self.skip_user_tests and isinstance(v, UserTest):
+                    elif self.skip_user_tests and isinstance(v, UserTest):
+                        del self.objs[k]
+
+                    # Skip users if requested
+                    elif self.skip_users and \
+                            isinstance(v, (User, Participation, Submission,
+                                           UserTest, Announcement)):
                         del self.objs[k]
 
                     # Skip print jobs if requested
-                    if self.skip_print_jobs and isinstance(v, PrintJob):
+                    elif self.skip_print_jobs and isinstance(v, PrintJob):
                         del self.objs[k]
 
                     # Skip generated data if requested
-                    if self.skip_generated and \
+                    elif self.skip_generated and \
                             isinstance(v, (SubmissionResult, UserTestResult)):
                         del self.objs[k]
+
+                for id_, data in self.datas.items():
+                    if not id_.startswith("_") and id_ in self.objs:
+                        self.add_relationships(data, self.objs[id_])
 
                 contest_id = list()
                 contest_files = set()
@@ -279,6 +274,11 @@ class DumpImporter(object):
                 # that depended on submissions or user tests that we
                 # might have removed above).
                 for id_ in self.datas["_objects"]:
+
+                    # It could have been removed by request
+                    if id_ not in self.objs:
+                        continue
+
                     obj = self.objs[id_]
                     session.add(obj)
                     session.flush()
@@ -290,6 +290,7 @@ class DumpImporter(object):
                             skip_submissions=self.skip_submissions,
                             skip_user_tests=self.skip_user_tests,
                             skip_print_jobs=self.skip_print_jobs,
+                            skip_users=self.skip_users,
                             skip_generated=self.skip_generated)
 
                 session.commit()
@@ -418,12 +419,12 @@ class DumpImporter(object):
             if val is None:
                 setattr(obj, prp.key, None)
             elif isinstance(val, str):
-                setattr(obj, prp.key, self.objs[val])
+                setattr(obj, prp.key, self.objs.get(val))
             elif isinstance(val, list):
-                setattr(obj, prp.key, list(self.objs[i] for i in val))
+                setattr(obj, prp.key, list(self.objs[i] for i in val if i in self.objs))
             elif isinstance(val, dict):
                 setattr(obj, prp.key,
-                        dict((k, self.objs[v]) for k, v in iteritems(val)))
+                        dict((k, self.objs[v]) for k, v in val.items() if v in self.objs))
             else:
                 raise RuntimeError(
                     "Unknown RelationshipProperty value: %s" % type(val))
@@ -444,9 +445,9 @@ class DumpImporter(object):
 
         # First read the description.
         try:
-            with io.open(descr_path, 'rt', encoding='utf-8') as fin:
+            with open(descr_path, 'rt', encoding='utf-8') as fin:
                 description = fin.read()
-        except IOError:
+        except OSError:
             description = ''
 
         # Put the file.
@@ -485,6 +486,8 @@ def main():
                         help="don't import submissions")
     parser.add_argument("-U", "--no-user-tests", action="store_true",
                         help="don't import user tests")
+    parser.add_argument("-X", "--no-users", action="store_true",
+                        help="don't import users")
     parser.add_argument("-P", "--no-print-jobs", action="store_true",
                         help="don't import print jobs")
     parser.add_argument("import_source", action="store", type=utf8_decoder,
@@ -499,6 +502,7 @@ def main():
                             skip_generated=args.no_generated,
                             skip_submissions=args.no_submissions,
                             skip_user_tests=args.no_user_tests,
+                            skip_users=args.no_users,
                             skip_print_jobs=args.no_print_jobs)
     success = importer.do_import()
     return 0 if success is True else 1

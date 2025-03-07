@@ -10,14 +10,17 @@
 <div class="page-header">
     <h1>{% trans %}Overview{% endtrans %}</h1>
 </div>
+
 <h2>{% trans %}General information{% endtrans %}</h2>
 <div class="row">
     <div class="{% if contest.per_user_time is not none %}span5{% else %}span9{% endif %}">
 
+      {# ranido-begin #}
       <h4>Veja a <a href="{{ url("static", "FolhaInformacoes.pdf") }}" target="_blank">Folha de Informações</a> antes de iniciar a prova.</h4>
       <p>&nbsp</p>
+      {# ranido-end #}      
 
-    <p>
+      <p>
 {% if phase == -1 %}
         {% trans %}The contest hasn't started yet.{% endtrans %}
         </p>
@@ -85,17 +88,17 @@
 
         <p>
         {% trans %}You can see the detailed result of a submission by using a token on it.{% endtrans %}
-        {% trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
+        {%+ trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
         </p>
     {% elif tokens_contest == TOKEN_MODE_INFINITE %}
         <p>
         {% trans %}You have a distinct set of tokens for each task.{% endtrans %}
-        {% trans type_pl=_("tokens") %}You can find the rules for the {{ type_pl }} on each task's description page.{% endtrans %}
+        {%+ trans type_pl=_("tokens") %}You can find the rules for the {{ type_pl }} on each task's description page.{% endtrans %}
         </p>
 
         <p>
         {% trans %}You can see the detailed result of a submission by using a token on it.{% endtrans %}
-        {% trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
+        {%+ trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
         </p>
     {% elif tokens_tasks == TOKEN_MODE_INFINITE %}
         <p>
@@ -105,7 +108,7 @@
 
         <p>
         {% trans %}You can see the detailed result of a submission by using a token on it.{% endtrans %}
-        {% trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
+        {%+ trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
         </p>
     {% else %}
         <p>
@@ -116,7 +119,7 @@
 
         <p>
         {% trans %}You can see the detailed result of a submission by using two tokens on it, one of each type.{% endtrans %}
-        {% trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
+        {%+ trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
         </p>
     {% endif %}
 {% endif %}
@@ -145,23 +148,25 @@
             <p>
     {% if actual_phase == -2 %}
         {% trans %}As soon as the contest starts you can choose to start your time frame.{% endtrans %}
-        {% trans %}Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
+        {%+ trans %}Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == -1 %}
         {% trans %}By clicking on the button below you can start your time frame.{% endtrans %}
-        {% trans %}Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
+        {%+ trans %}Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == 0 %}
         {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }}.{% endtrans %}
-        {% trans %}You can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
+        {%+ trans %}You can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == +1 %}
         {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }} and you already finished it.{% endtrans %}
-        {% trans %}There's nothing you can do now.{% endtrans %}
-    {% elif actual_phase == +2 %}
+        {%+ trans %}There's nothing you can do now.{% endtrans %}
+    {% elif actual_phase >= +2 %}
         {% if participation.starting_time is none %}
             {% trans %}You never started your time frame. Now it's too late.{% endtrans %}
         {% else %}
             {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }} and you already finished it.{% endtrans %}
         {% endif %}
-        {% trans %}There's nothing you can do now.{% endtrans %}
+        {% if actual_phase != +3 %}
+            {%+ trans %}There's nothing you can do now.{% endtrans %}
+        {% endif %}
     {% endif %}
             </p>
 
@@ -169,7 +174,10 @@
         <form action="{{ contest_url("start") }}" method="POST" style="margin: 0">
             {{ xsrf_form_html|safe }}
             <input type="hidden" name="next" value="{{ contest_url() }}">
-            <button type="submit" class="btn btn-danger btn-large" style="width:100%;-moz-box-sizing:border-box;box-sizing:border-box;" type="submit" onclick="alert('Eu atesto que estou fazendo a prova na escola, sob supervisão, e que não usarei ferramentas de inteligência artificial nem consultarei a internet para tentar resolver as tarefas. Entendo que a violação das regras da OBI2024 implicará na minha desclassificação.')">{% trans %}Start!{% endtrans %}</button>
+
+	    {# ranido-begin #}
+            <button type="submit" class="btn btn-danger btn-large" style="width:100%;-moz-box-sizing:border-box;box-sizing:border-box;" type="submit" onclick="alert('Eu atesto que estou fazendo a prova na escola, sob supervisão, e que não usarei ferramentas de inteligência artificial nem consultarei a internet para tentar resolver as tarefas. Entendo que a violação das regras da OBI2025 implicará na minha desclassificação.')">{% trans %}Start!{% endtrans %}</button>
+	    {# ranido-end #}
         </form>
     {% endif %}
 
@@ -196,13 +204,10 @@
         <tr>
             <th>{% trans %}Task{% endtrans %}</th>
             <th>{% trans %}Name{% endtrans %}</th>
-	    {# ranido-begin
             <th>{% trans %}Time limit{% endtrans %}</th>
             <th>{% trans %}Memory limit{% endtrans %}</th>
             <th>{% trans %}Type{% endtrans %}</th>
-	    ranido-end #}
             <th>{% trans %}Files{% endtrans %}</th>
-
 {% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED %}
             <th>{% trans %}Tokens{% endtrans %}</th>
 {% endif %}
@@ -214,7 +219,6 @@
         <tr>
             <th>{{ t_iter.name }}</th>
             <td>{{ t_iter.title }}</td>
-    {# ranido-begin
             <td>
     {% if t_iter.active_dataset.time_limit is not none %}
         {{ t_iter.active_dataset.time_limit|format_duration(length="long") }}
@@ -224,13 +228,12 @@
             </td>
             <td>
     {% if t_iter.active_dataset.memory_limit is not none %}
-        {{ (t_iter.active_dataset.memory_limit * 1024 * 1024)|format_size }}
+        {{ t_iter.active_dataset.memory_limit|format_size }}
     {% else %}
         {% trans %}N/A{% endtrans %}
     {% endif %}
             </td>
             <td>{{ get_task_type(dataset=t_iter.active_dataset).name }}</td>
-    ranido-end #}
             <td>{{ t_iter.submission_format|map("replace", ".%l", extensions)|join(" ") }}</td>
     {% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED %}
             <td>
@@ -248,12 +251,14 @@
 {% endif %}
 
 {# ranido-begin #}
-<p>Para soluções em Java, o nome do arquivo deve ser <em>xxxx.java</em> e o nome da classe principal
-  deve ser <em>xxxx</em>, onde <em>xxxx</em> é o identificador
-  da tarefa {% if actual_phase == 0 or actual_phase == 3 %} (primeira coluna à esquerda na tabela acima){% endif %}. Note que todas as letras de <em>xxxx</em>
-  são minúsculas.
+<p>Para soluções em Java, o nome do arquivo deve
+  ser <em>xxxx.java</em> e o nome da classe principal deve
+  ser <em>xxxx</em>, onde <em>xxxx</em> é o identificador da tarefa
+  {% if actual_phase == 0 or actual_phase == 3 %} (primeira coluna à
+  esquerda na tabela acima){% endif %}. Note que todas as letras
+  de <em>xxxx</em> são minúsculas.
 </p>
-{#
+{# TO DO!! copy files to static
 <p>Veja instruções para submissão e exemplos de soluções nas diferentes linguagens:
   <ul>
     <li><a target="_blank" href="https://olimpiada.ic.unicamp.br/pratique/exemplo_solucao_c">C</a></li>
@@ -265,5 +270,6 @@
 </p>
 #}
 {# ranido-end #}
+
 </div>
 {% endblock core %}

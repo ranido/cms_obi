@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,21 +25,11 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, iteritems
-
 import logging
 import random
-
 from datetime import timedelta
 
 import gevent.lock
-
 from gevent.event import Event
 
 from cms.db import SessionGen
@@ -51,7 +40,7 @@ from cmscommon.datetime import make_datetime, make_timestamp
 logger = logging.getLogger(__name__)
 
 
-class WorkerPool(object):
+class WorkerPool:
     """This class keeps the state of the workers attached to ES, and
     allow the ES to get a usable worker when it needs it.
 
@@ -298,7 +287,7 @@ class WorkerPool(object):
 
         """
         pool = []
-        for shard, worker_operation in iteritems(self._operations):
+        for shard, worker_operation in self._operations.items():
             if worker_operation == operation:
                 if not require_connection or self._worker[shard].connected:
                     pool.append(shard)
@@ -336,7 +325,7 @@ class WorkerPool(object):
 
         """
         result = dict()
-        for shard in iterkeys(self._worker):
+        for shard in self._worker.keys():
             s_time = self._start_time[shard]
             s_time = make_timestamp(s_time) if s_time is not None else None
 

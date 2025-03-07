@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
@@ -23,17 +22,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import io
 import logging
-import os
 import subprocess
+
+from cmscommon.commands import pretty_print_cmdline
 
 
 logger = logging.getLogger(__name__)
@@ -50,24 +42,22 @@ class TestException(Exception):
 
 
 def sh(cmdline, ignore_failure=False):
-    """Execute a simple shell command.
+    """Execute a simple command.
 
-    If cmdline is a string, it is passed to sh -c verbatim.  All escaping must
-    be performed by the user. If cmdline is an array, then no escaping is
-    required.
+    cmd ([str]): the (unescaped) command to execute.
+    ignore_failure (bool): whether to suppress failures.
+
+    raise (TestException): if the command failed and ignore_failure was False.
 
     """
     if CONFIG["VERBOSITY"] >= 1:
-        # TODO Use shlex.quote in Python 3.3.
-        logger.info('$ %s', ' '.join(cmdline))
+        logger.info('$ %s', pretty_print_cmdline(cmdline))
     kwargs = dict()
     if CONFIG["VERBOSITY"] >= 3:
-        # TODO Use subprocess.DEVNULL in Python 3.3.
-        kwargs["stdout"] = io.open(os.devnull, "wb")
+        kwargs["stdout"] = subprocess.DEVNULL
         kwargs["stderr"] = subprocess.STDOUT
-    ret = subprocess.call(cmdline, **kwargs)
-    if not ignore_failure and ret != 0:
-        raise TestException(
-            # TODO Use shlex.quote in Python 3.3.
-            "Execution failed with %d/%d. Tried to execute:\n%s\n" %
-            (ret & 0xff, ret >> 8, ' '.join(cmdline)))
+    kwargs["check"] = not ignore_failure
+    try:
+        subprocess.run(cmdline, **kwargs)
+    except subprocess.CalledProcessError as e:
+        raise TestException("Execution failed") from e

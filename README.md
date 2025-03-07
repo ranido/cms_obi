@@ -1,19 +1,20 @@
 Contest Management System
 =========================
 
-[![Build Status](https://travis-ci.org/cms-dev/cms.svg?branch=master)](https://travis-ci.org/cms-dev/cms)
-[![codecov](https://codecov.io/gh/cms-dev/cms/branch/master/graph/badge.svg)](https://codecov.io/gh/cms-dev/cms)
-[![Join the chat at https://gitter.im/cms-dev/cms](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cms-dev/cms?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 Homepage: <http://cms-dev.github.io/>
 
+[![Build Status](https://github.com/cms-dev/cms/actions/workflows/main.yml/badge.svg)](https://github.com/cms-dev/cms/actions)
+[![Codecov](https://codecov.io/gh/cms-dev/cms/branch/master/graph/badge.svg)](https://codecov.io/gh/cms-dev/cms)
+[![Get support on Telegram](https://img.shields.io/endpoint?label=Support&style=flat-square&url=https%3A%2F%2Fmogyo.ro%2Fquart-apis%2Ftgmembercount%3Fchat_id%3Dcontestms)](https://t.me/contestms)
+
+[🌍 Help translate CMS in your language!](https://cms-dev.oneskyapp.com/collaboration/project?id=392655)
 
 Preambule
 ---------
-This is a fork of the original CMS version 1.4rc1, adapted to the needs of the
+This is a fork of the original CMS version 1.5, adapted to the needs of the
 Brazilian Olympiad in Informatics (https://olimpiada.ic.unicamp.br).
 
-It implements three modifications:
+It implements two modifications:
 
 1. Allow different time and memory limits for different programming languages.
    Two new JSONB columns were created in the database for the table "dataset",
@@ -35,17 +36,11 @@ It implements three modifications:
      * cms/server/contest/templates/overview.html
      * cms/server/contest/templates/task_description.html
       
-2. Allow using the pbkdf2 hashing method for passwords (we wanted to use the
-   same passwords the contestants already had for our main web server, Django).
-
+2. Register the first IP the user used to log in.
    Affected files:
-     * cmscommon/crypto.py
-     * cmscommon/hashers.py (added)
-     * cmscontrib/AddUser.py
-     * cmscontrib/UpdatePassword.py (added)
-     * cms/server/admin/templates/fragments/hashed_password_form.html      
-     * setup.py
-      
+     * cms/server/contest/handlers/main.py
+     * cms/server/contest/handlers/contest.py
+
 3. Put a logo in the header of the contest page.
 
    Affected files:
@@ -56,7 +51,7 @@ It implements three modifications:
 
 Many thanks to the CMS team for this wonderfull system!
 
-Ricardo Anido (ranido@ic.unicamp.br)
+Ricardo Anido (ranido@unicamp.br)
 
 Introduction
 ------------
@@ -98,25 +93,22 @@ Support
 To learn how to install and use CMS, please read the **documentation**,
 available at <https://cms.readthedocs.org/>.
 
-If you have questions or need help troubleshooting some problem,
-contact us in the **chat** at [gitter](https://gitter.im/cms-dev/cms),
-or write on the **support mailing list**
-<contestms-support@googlegroups.com>, where no registration is required
-(you can see the archives on
-[Google Groups](https://groups.google.com/forum/#!forum/contestms-support)).
+If you have questions or need help troubleshooting some problem, contact us in
+the **chat** on [Telegram](https://t.me/contestms), or write on the **support
+mailing list** <contestms-support@googlegroups.com>, where no registration is
+required (you can see the archives on [Google
+Groups](https://groups.google.com/forum/#!forum/contestms-support)).
 
-To help with the troubleshooting, you can upload on some online
-pastebin the relevant **log files**, that you can find in
-/var/local/log/cms/ (if CMS was running installed) or in ./log (if it
-was running from the local copy).
+To help with the troubleshooting, you can upload on some online pastebin the
+relevant **log files**, that you can find in `/var/local/log/cms/`.
 
 If you encountered a bug, please file an
-[issue](https://github.com/cms-dev/cms/issues) on **GitHub** following
-the instructions in the issue template.
+[issue](https://github.com/cms-dev/cms/issues) on **GitHub** following the
+instructions in the issue template.
 
-**Please don't file issues to ask for help**, we are happy to help
-on the mailing list or on gitter, and it is more likely somebody will
-answer your query sooner.
+**Please don't file issues to ask for help**, we are happy to help on the
+mailing list or on Telegram, and it is more likely somebody will answer your
+query sooner.
 
 You can subscribe to <contestms-announce@googlegroups.com> to receive
 **announcements** of new releases and other important news. Register on

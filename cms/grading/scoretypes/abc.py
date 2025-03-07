@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -31,14 +30,6 @@ task.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, with_metaclass
-
 import logging
 import re
 from abc import ABCMeta, abstractmethod
@@ -56,7 +47,7 @@ def N_(message):
     return message
 
 
-class ScoreType(with_metaclass(ABCMeta, object)):
+class ScoreType(metaclass=ABCMeta):
     """Base class for all score types, that must implement all methods
     defined here.
 
@@ -334,7 +325,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         if all(isinstance(t, int) for t in t_params):
 
             # XXX Lexicographical order by codename
-            indices = sorted(iterkeys(self.public_testcases))
+            indices = sorted(self.public_testcases.keys())
             current = 0
             targets = []
 
@@ -347,7 +338,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
         elif all(isinstance(t, str) for t in t_params):
 
-            indices = sorted(iterkeys(self.public_testcases))
+            indices = sorted(self.public_testcases.keys())
             targets = []
 
             for t in t_params:

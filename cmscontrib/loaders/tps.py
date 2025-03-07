@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Programming contest management system
 # Copyright © 2017 Kiarash Golezardi <kiarashgolezardi@gmail.com>
@@ -19,24 +18,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import io
 import json
 import logging
 import os
 import re
 import subprocess
-
 from datetime import timedelta
 
 from cms.db import Task, Dataset, Manager, Testcase, Attachment, Statement
-
 from .base_loader import TaskLoader
 
 
@@ -123,8 +112,8 @@ class TpsTaskLoader(TaskLoader):
         json_src = os.path.join(self.path, 'problem.json')
         if not os.path.exists(json_src):
             logger.critical('No task found.')
-            raise IOError('No task found at path %s' % json_src)
-        with io.open(json_src, 'rt', encoding='utf-8') as json_file:
+            raise OSError('No task found at path %s' % json_src)
+        with open(json_src, 'rt', encoding='utf-8') as json_file:
             data = json.load(json_file)
 
         name = data['code']
@@ -239,10 +228,13 @@ class TpsTaskLoader(TaskLoader):
         if os.path.exists(checker_src):
             logger.info("Checker found, compiling")
             checker_exe = os.path.join(checker_dir, "checker")
-            subprocess.call([
+            ret = subprocess.call([
                 "g++", "-x", "c++", "-std=gnu++14", "-O2", "-static",
                 "-o", checker_exe, checker_src
             ])
+            if ret != 0:
+                logger.critical("Could not compile checker")
+                return None
             digest = self.file_cacher.put_file_from_path(
                 checker_exe,
                 "Manager for task %s" % name)
@@ -294,10 +286,13 @@ class TpsTaskLoader(TaskLoader):
         if os.path.exists(manager_src):
             logger.info("Manager found, compiling")
             manager_exe = os.path.join(graders_dir, "manager")
-            subprocess.call([
+            ret = subprocess.call([
                 "g++", "-x", "c++", "-O2", "-static",
                 "-o", manager_exe, manager_src
             ])
+            if ret != 0:
+                logger.critical("Could not compile manager")
+                return None
             digest = self.file_cacher.put_file_from_path(
                 manager_exe,
                 "Manager for task %s" % name)
@@ -344,8 +339,8 @@ class TpsTaskLoader(TaskLoader):
             add_optional_name = False
             for subtask in subtasks:
                 subtask_no += 1
-                with io.open(os.path.join(subtasks_dir, subtask), 'rt',
-                             encoding='utf-8') as subtask_json:
+                with open(os.path.join(subtasks_dir, subtask), 'rt',
+                          encoding='utf-8') as subtask_json:
                     subtask_data = json.load(subtask_json)
                     score = int(subtask_data["score"])
                     testcases = "|".join(

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
@@ -18,19 +17,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 task_info = {
     "name": "batchfileiomanaged",
     "title": "Test Batch Task using manager with I/O via files",
     "official_language": "",
     "submission_format_choice": "other",
     "submission_format": "batchfileiomanaged.%l",
+    "user_manager_format": "grader.%l",
     "time_limit_{{dataset_id}}": "0.5",
     "memory_limit_{{dataset_id}}": "128",
     "task_type_{{dataset_id}}": "Batch",
@@ -43,6 +36,7 @@ task_info = {
 }
 
 managers = [
+    "task.h",
     "grader.c",
     "grader.cpp",
     "grader.pas",

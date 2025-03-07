@@ -1,11 +1,11 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2014 Luca Versari <veluca93@gmail.com>
 # Copyright © 2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2022 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,28 +20,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import argparse
-import io
 import logging
 import os
 import re
 import sys
 
 from cms import utf8_decoder
-from cmstestsuite import CONFIG
-from cmstestsuite.coverage import clear_coverage, combine_coverage, \
-    send_coverage_to_codecov
+from cmstestsuite import TestException, CONFIG
+from cmstestsuite.Tests import ALL_TESTS
+from cmstestsuite.coverage import clear_coverage, combine_coverage
 from cmstestsuite.profiling import \
     PROFILER_KERNPROF, PROFILER_NONE, PROFILER_YAPPI
 from cmstestsuite.testrunner import TestRunner
-from cmstestsuite.Tests import ALL_TESTS
 
 
 logger = logging.getLogger(__name__)
@@ -60,9 +51,9 @@ def load_test_list_from_file(filename):
     if not os.path.exists(filename):
         return []
     try:
-        with io.open(filename, "rt", encoding="utf-8") as f:
+        with open(filename, "rt", encoding="utf-8") as f:
             lines = f.readlines()
-    except (IOError, OSError) as e:
+    except OSError as e:
         print("Failed to read test list. %s." % (e))
         return None
 
@@ -150,7 +141,7 @@ def filter_tests(orig_test_list, regexes, languages):
 
 
 def write_test_case_list(test_list, filename):
-    with io.open(filename, 'wt', encoding="utf-8") as f:
+    with open(filename, 'wt', encoding="utf-8") as f:
         for test, lang in test_list:
             f.write('%s %s\n' % (test.name, lang))
 
@@ -177,19 +168,16 @@ def main():
     parser.add_argument(
         "-v", "--verbose", action="count", default=0,
         help="print debug information (use multiple times for more)")
-    parser.add_argument(
-        "--codecov", action="store_true",
-        help="send coverage results to Codecov (requires --coverage)")
     g = parser.add_mutually_exclusive_group()
     g.add_argument(
-        "--coverage", action="store_true",
-        help="compute line coverage information")
+        "--coverage", action="store", type=utf8_decoder,
+        help="path to the XML coverage report file (if not specified, "
+             "coverage is not computed)")
     g.add_argument(
         "--profiler", choices=[PROFILER_YAPPI, PROFILER_KERNPROF],
         default=PROFILER_NONE, help="set profiler")
+
     args = parser.parse_args()
-    if args.codecov and not args.coverage:
-        parser.error("--codecov requires --coverage")
 
     CONFIG["VERBOSITY"] = args.verbose
     CONFIG["COVERAGE"] = args.coverage
@@ -235,21 +223,34 @@ def main():
 
     # Startup the test runner.
     runner = TestRunner(test_list, contest_id=args.contest, workers=4)
+    failures = []
 
-    # Submit and wait for all tests to complete.
-    runner.submit_tests()
-    failures = runner.wait_for_evaluation()
-    write_test_case_list(
-        [(test, lang) for test, lang, _ in failures],
-        FAILED_TEST_FILENAME)
+    testing_general_failure = False
 
-    # And good night!
-    runner.shutdown()
-    runner.log_elapsed_time()
+    try:
+        # Submit and wait for all tests to complete.
+        runner.submit_tests()
+        failures += runner.wait_for_evaluation()
+        write_test_case_list(
+            [(test, lang) for test, lang, _ in failures],
+            FAILED_TEST_FILENAME)
+    except TestException:
+        if os.path.exists("./log/cms/last.log"):
+            print("\n\n===== START OF LOG DUMP =====\n\n")
+            with open("./log/cms/last.log", "rt", encoding="utf-8") as f:
+                print(f.read())
+            print("\n\n===== END OF LOG DUMP =====\n\n")
+        logging.error("Failure while running tests", exc_info=True)
+        testing_general_failure = True
+    finally:
+        # And good night!
+        runner.shutdown()
+        runner.log_elapsed_time()
+
     combine_coverage()
 
-    if args.codecov:
-        send_coverage_to_codecov("functionaltests")
+    if testing_general_failure:
+        return 1
 
     logger.info("Executed: %s", tests)
     logger.info("Failed: %s", len(failures))

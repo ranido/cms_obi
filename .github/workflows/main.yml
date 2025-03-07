@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Check available cgroups
+        run: |
+          mount | grep cgroup
+
+      - name: Build docker image
+        run: |
+          docker compose -p cms -f docker-compose.test.yml build testcms
+
+      - name: Run tests
+        run: |
+          docker compose -p cms -f docker-compose.test.yml run --rm testcms
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ./codecov/junit.xml
+          flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload unit test coverage results to Codecov
+        uses: codecov/codecov-action@v4
+        if: ${{ !cancelled() }}
+        with:
+          files: ./codecov/unittests.xml
+          flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload functional test coverage results to Codecov
+        uses: codecov/codecov-action@v4
+        if: ${{ !cancelled() }}
+        with:
+          files: ./codecov/functionaltests.xml
+          flags: functionaltests
+          token: ${{ secrets.CODECOV_TOKEN }}

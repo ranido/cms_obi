@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -7,6 +6,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2020 Andrey Vihrov <andrey.vihrov@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,23 +21,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import argparse
-import chardet
-import errno
 import itertools
 import logging
 import netifaces
 import os
+import pwd
+import stat
 import sys
-import grp
 
+import chardet
 import gevent
 import gevent.socket
 
@@ -56,23 +49,25 @@ def mkdir(path):
     """
     try:
         os.mkdir(path)
+    except FileExistsError:
+        return True
+    except OSError:
+        return False
+    else:
         try:
             os.chmod(path, 0o770)
-            cmsuser_gid = grp.getgrnam(config.cmsuser).gr_gid
+            cmsuser_gid = pwd.getpwnam(config.cmsuser).pw_gid
             os.chown(path, -1, cmsuser_gid)
-        except OSError as error:
+        except OSError:
             os.rmdir(path)
             return False
-    except OSError as error:
-        if error.errno != errno.EEXIST:
-            return False
-    return True
+        else:
+            return True
 
 
-# This function is vulnerable to a symlink attack, see:
-# https://bugs.python.org/issue4489
-# It appears the only bulletproof fix requires the ability to traverse
-# directories using file descriptors (like fwalk) which is only in py3.
+# This function uses os.fwalk() to avoid the symlink attack, see:
+# - https://bugs.python.org/issue4489
+# - https://bugs.python.org/issue13734
 def rmtree(path):
     """Recursively delete a directory tree.
 
@@ -85,20 +80,20 @@ def rmtree(path):
     raise (OSError): in case of errors in the elementary operations.
 
     """
-    if os.path.islink(path):
-        raise OSError("unsafe to call rmtree on a symlink")
-
-    for dirpath, subdirnames, filenames in os.walk(path, topdown=False):
+    # If path is a symlink, fwalk() yields no entries.
+    for _, subdirnames, filenames, dirfd in os.fwalk(path, topdown=False):
         for filename in filenames:
-            os.remove(os.path.join(dirpath, filename))
+            os.remove(filename, dir_fd=dirfd)
             gevent.sleep(0)
         for subdirname in subdirnames:
-            subdirpath = os.path.join(dirpath, subdirname)
-            if os.path.islink(subdirpath):
-                os.remove(subdirpath)
-                gevent.sleep(0)
-        os.rmdir(dirpath)
-        gevent.sleep(0)
+            if stat.S_ISLNK(os.lstat(subdirname, dir_fd=dirfd).st_mode):
+                os.remove(subdirname, dir_fd=dirfd)
+            else:
+                os.rmdir(subdirname, dir_fd=dirfd)
+            gevent.sleep(0)
+
+    # Remove the directory itself. An exception is raised if path is a symlink.
+    os.rmdir(path)
 
 
 def utf8_decoder(value):
@@ -323,7 +318,7 @@ def _get_shard_from_addresses(service, addrs):
                                       host, port,
                                       gevent.socket.AF_INET,
                                       gevent.socket.SOCK_STREAM)])
-        except (gevent.socket.gaierror, gevent.socket.error):
+        except OSError:
             pass
         else:
             if not ipv4_addrs.isdisjoint(res_ipv4_addrs):
@@ -335,7 +330,7 @@ def _get_shard_from_addresses(service, addrs):
                                       host, port,
                                       gevent.socket.AF_INET6,
                                       gevent.socket.SOCK_STREAM)])
-        except (gevent.socket.gaierror, gevent.socket.error):
+        except OSError:
             pass
         else:
             if not ipv6_addrs.isdisjoint(res_ipv6_addrs):

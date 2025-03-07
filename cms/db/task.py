@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -25,30 +24,21 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import itervalues, iteritems
-
 import copy
 from datetime import timedelta
 
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint, \
     UniqueConstraint, ForeignKeyConstraint
 from sqlalchemy.types import Boolean, Integer, Float, String, Unicode, \
     Interval, Enum, BigInteger
-from sqlalchemy.orm import relationship
-from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE, \
     FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cmscommon.constants import \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
-
 from . import Codename, Filename, FilenameSchemaArray, Digest, Base, Contest
 
 
@@ -391,7 +381,7 @@ class Dataset(Base):
         nullable=False,
         default=False)
 
-    # Time and memory limits for every testcase.
+    # Time and memory limits (in seconds and bytes) for every testcase.
     time_limit = Column(
         Float,
         CheckConstraint("time_limit > 0"),
@@ -399,6 +389,7 @@ class Dataset(Base):
     memory_limit = Column(
         BigInteger,
         CheckConstraint("memory_limit > 0"),
+        CheckConstraint("MOD(memory_limit, 1048576) = 0"),
         nullable=True)
 
     # ranido-begin
@@ -482,7 +473,7 @@ class Dataset(Base):
     @property
     def score_type_object(self):
         public_testcases = {k: tc.public
-                            for k, tc in iteritems(self.testcases)}
+                            for k, tc in self.testcases.items()}
         if not hasattr(self, "_cached_score_type_object") \
                 or self.score_type != self._cached_score_type \
                 or (self.score_type_parameters
@@ -515,13 +506,13 @@ class Dataset(Base):
         """
         new_testcases = dict()
         if clone_testcases or clone_results:
-            for old_t in itervalues(old_dataset.testcases):
+            for old_t in old_dataset.testcases.values():
                 new_t = old_t.clone()
                 new_t.dataset = self
                 new_testcases[new_t.codename] = new_t
 
         if clone_managers or clone_results:
-            for old_m in itervalues(old_dataset.managers):
+            for old_m in old_dataset.managers.values():
                 new_m = old_m.clone()
                 new_m.dataset = self
 
@@ -538,7 +529,7 @@ class Dataset(Base):
                 new_sr.dataset = self
 
                 # Create executables.
-                for old_e in itervalues(old_sr.executables):
+                for old_e in old_sr.executables.values():
                     new_e = old_e.clone()
                     new_e.submission_result = new_sr
 

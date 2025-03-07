@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,17 +18,9 @@
 
 """Tests for the Communication task type."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import os
 import unittest
-
-from mock import MagicMock, call, ANY, patch
+from unittest.mock import MagicMock, call, ANY, patch
 
 from cms import config
 from cms.db import File, Manager, Executable
@@ -38,7 +29,7 @@ from cms.grading.steps import merge_execution_stats
 from cms.grading.tasktypes.Communication import Communication
 from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
 from cmstestsuite.unit_tests.grading.tasktypes.tasktypetestutils import \
-    COMPILATION_COMMAND_1, COMPILATION_COMMAND_2, LANG_1, LANG_2, OUTCOME,\
+    COMPILATION_COMMAND_1, COMPILATION_COMMAND_2, LANG_1, LANG_2, OUTCOME, \
     STATS_OK, STATS_RE, TEXT, TaskTypeTestMixin, fake_compilation_commands
 
 
@@ -53,7 +44,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
     """Tests for get_compilation_commands()."""
 
     def setUp(self):
-        super(TestGetCompilationCommands, self).setUp()
+        super().setUp()
         self.setUpMocks("Communication")
         self.languages.update({LANG_1, LANG_2})
 
@@ -64,7 +55,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
             "L1": fake_compilation_commands(
                 COMPILATION_COMMAND_1, ["stub.l1", "foo.l1"], "foo"),
             "L2": fake_compilation_commands(
-                COMPILATION_COMMAND_2, ["stub.l2", "foo.l2"], "foo"),
+                COMPILATION_COMMAND_2, ["stub.l2", "foo.l2"], "foo.ext"),
         })
 
     def test_two_processes(self):
@@ -76,7 +67,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
             "L1": fake_compilation_commands(
                 COMPILATION_COMMAND_1, ["stub.l1", "foo.l1"], "foo"),
             "L2": fake_compilation_commands(
-                COMPILATION_COMMAND_2, ["stub.l2", "foo.l2"], "foo"),
+                COMPILATION_COMMAND_2, ["stub.l2", "foo.l2"], "foo.ext"),
         })
 
     def test_many_files(self):
@@ -90,7 +81,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
                 "bar_foo"),
             "L2": fake_compilation_commands(
                 COMPILATION_COMMAND_2, ["stub.l2", "foo.l2", "bar.l2"],
-                "bar_foo"),
+                "bar_foo.ext"),
         })
 
     def test_no_stub(self):
@@ -102,7 +93,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
             "L1": fake_compilation_commands(
                 COMPILATION_COMMAND_1, ["foo.l1"], "foo"),
             "L2": fake_compilation_commands(
-                COMPILATION_COMMAND_2, ["foo.l2"], "foo"),
+                COMPILATION_COMMAND_2, ["foo.l2"], "foo.ext"),
         })
 
     def test_std_io(self):
@@ -114,7 +105,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
             "L1": fake_compilation_commands(
                 COMPILATION_COMMAND_1, ["stub.l1", "foo.l1"], "foo"),
             "L2": fake_compilation_commands(
-                COMPILATION_COMMAND_2, ["stub.l2", "foo.l2"], "foo"),
+                COMPILATION_COMMAND_2, ["stub.l2", "foo.l2"], "foo.ext"),
         })
 
 
@@ -132,7 +123,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
     """
 
     def setUp(self):
-        super(TestCompile, self).setUp()
+        super().setUp()
         self.setUpMocks("Communication")
         self.languages.update({LANG_1})
         self.file_cacher = MagicMock()
@@ -307,7 +298,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
     """
 
     def setUp(self):
-        super(TestEvaluate, self).setUp()
+        super().setUp()
         self.setUpMocks("Communication")
         self.languages.update({LANG_1})
         self.file_cacher = MagicMock()
@@ -329,7 +320,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
                              input="digest of input",
                              output="digest of correct output",
                              time_limit=2.5,
-                             memory_limit=123,
+                             memory_limit=123 * 1024 * 1024,
                              executables=executables,
                              managers=managers,
                              multithreaded_sandbox=True)
@@ -359,7 +350,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
             lambda sandbox, *args, **kwargs: sandbox_to_return_value[sandbox]
 
     @patch.object(config, "trusted_sandbox_max_time_s", 4321)
-    @patch.object(config, "trusted_sandbox_max_memory_kib", 1024 * 1234)
+    @patch.object(config, "trusted_sandbox_max_memory_kib", 1234 * 1024)
     def test_single_process_success(self):
         tt, job = self.prepare(
             [1, "stub", "fifo_io"],
@@ -394,11 +385,11 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         cmdline_usr = ["run1", "foo", "stub",
                        "/fifo0/m_to_u0", "/fifo0/u0_to_m"]
         self.evaluation_step_before_run.assert_has_calls([
-            call(sandbox_mgr, cmdline_mgr, 4321, 1234,
+            call(sandbox_mgr, cmdline_mgr, 4321, 1234 * 1024 * 1024,
                  dirs_map={os.path.join(self.base_dir, "0"): ("/fifo0", "rw")},
                  writable_files=["output.txt"],
                  stdin_redirect="input.txt", multiprocess=True),
-            call(sandbox_usr, cmdline_usr, 2.5, 123,
+            call(sandbox_usr, cmdline_usr, 2.5, 123 * 1024 * 1024,
                  dirs_map={os.path.join(self.base_dir, "0"): ("/fifo0", "rw")},
                  stdin_redirect=None,
                  stdout_redirect=None,
@@ -603,7 +594,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
                  multiprocess=ANY)])
 
     @patch.object(config, "trusted_sandbox_max_time_s", 4321)
-    @patch.object(config, "trusted_sandbox_max_memory_kib", 1024 * 1234)
+    @patch.object(config, "trusted_sandbox_max_memory_kib", 1234 * 1024)
     def test_many_processes_success(self):
         tt, job = self.prepare(
             [2, "stub", "fifo_io"],
@@ -645,19 +636,19 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         cmdline_usr1 = ["run1", "foo", "stub",
                         "/fifo1/m_to_u1", "/fifo1/u1_to_m", "1"]
         self.evaluation_step_before_run.assert_has_calls([
-            call(sandbox_mgr, cmdline_mgr, 4321, 1234,
+            call(sandbox_mgr, cmdline_mgr, 4321, 1234 * 1024 * 1024,
                  dirs_map={
                      os.path.join(self.base_dir, "0"): ("/fifo0", "rw"),
                      os.path.join(self.base_dir, "1"): ("/fifo1", "rw"),
                  },
                  writable_files=["output.txt"],
                  stdin_redirect="input.txt", multiprocess=True),
-            call(sandbox_usr0, cmdline_usr0, 2.5, 123,
+            call(sandbox_usr0, cmdline_usr0, 2.5, 123 * 1024 * 1024,
                  dirs_map={os.path.join(self.base_dir, "0"): ("/fifo0", "rw")},
                  stdin_redirect=None,
                  stdout_redirect=None,
                  multiprocess=True),
-            call(sandbox_usr1, cmdline_usr1, 2.5, 123,
+            call(sandbox_usr1, cmdline_usr1, 2.5, 123 * 1024 * 1024,
                  dirs_map={os.path.join(self.base_dir, "1"): ("/fifo1", "rw")},
                  stdin_redirect=None,
                  stdout_redirect=None,

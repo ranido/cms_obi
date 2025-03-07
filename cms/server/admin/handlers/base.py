@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -28,23 +27,24 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import ipaddress
 import json
 import logging
 import traceback
-
 from datetime import datetime, timedelta
 from functools import wraps
 
-import tornado.web
+import collections
+try:
+    collections.MutableMapping
+except:
+    # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
+    collections.MutableMapping = collections.abc.MutableMapping
 
+try:
+    import tornado4.web as tornado_web
+except ImportError:
+    import tornado.web as tornado_web
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import subqueryload
 
@@ -54,8 +54,8 @@ from cms.db import Admin, Contest, Participation, Question, Submission, \
 from cms.grading.scoretypes import get_score_type_class
 from cms.grading.tasktypes import get_task_type_class
 from cms.server import CommonRequestHandler, FileHandlerMixin
-from cmscommon.datetime import make_datetime
 from cmscommon.crypto import hash_password, parse_authentication
+from cmscommon.datetime import make_datetime
 
 
 logger = logging.getLogger(__name__)
@@ -174,7 +174,7 @@ def require_permission(permission="authenticated", self_allowed=False):
 
         """
         @wraps(func)
-        @tornado.web.authenticated
+        @tornado_web.authenticated
         def newfunc(self, *args, **kwargs):
             """Check if the permission is present before calling the function.
 
@@ -193,7 +193,7 @@ def require_permission(permission="authenticated", self_allowed=False):
                     # the current user id.
                     return func(self, *args, **kwargs)
                 else:
-                    raise tornado.web.HTTPError(403, "Admin is not authorized")
+                    raise tornado_web.HTTPError(403, "Admin is not authorized")
 
         return newfunc
 
@@ -276,14 +276,14 @@ class BaseHandler(CommonRequestHandler):
             session = self.sql_session
         entity = cls.get_from_id(ident, session)
         if entity is None:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
         return entity
 
     def prepare(self):
         """This method is executed at the beginning of each request.
 
         """
-        super(BaseHandler, self).prepare()
+        super().prepare()
         self.contest = None
 
     def render(self, template_name, **params):
@@ -327,7 +327,7 @@ class BaseHandler(CommonRequestHandler):
 
     def write_error(self, status_code, **kwargs):
         if "exc_info" in kwargs and \
-                kwargs["exc_info"][0] != tornado.web.HTTPError:
+                kwargs["exc_info"][0] != tornado_web.HTTPError:
             exc_info = kwargs["exc_info"]
             logger.error(
                 "Uncaught exception (%r) while processing a request: %s",
@@ -421,6 +421,31 @@ class BaseHandler(CommonRequestHandler):
                 raise ValueError("Time limit out of range.")
             dest["time_limit"] = value
 
+    def get_memory_limit(self, dest, field):
+        """Parse the memory limit.
+
+        Read the argument with the given name and use its value to set
+        the "memory_limit" item of the given dictionary.
+
+        dest (dict): a place to store the result.
+        field (string): the name of the argument to use.
+
+        """
+        value = self.get_argument(field, None)
+        if value is None:
+            return
+        if len(value) == 0:
+            dest["memory_limit"] = None
+        else:
+            try:
+                value = int(value)
+            except:
+                raise ValueError("Can't cast %s to int." % value)
+            if not 0 < value:
+                raise ValueError("Invalid memory limit.")
+            # AWS displays the value as MiB, but it is stored as bytes.
+            dest["memory_limit"] = value * 1024 * 1024
+
     # ranido-begin
     def get_time_limit_lang(self, dest, field, time_limit_name):
         """Parse the time limit.
@@ -472,30 +497,6 @@ class BaseHandler(CommonRequestHandler):
             dest["memory_limit_lang"][memory_limit_name] = value
 
     # ranido-end
-
-    def get_memory_limit(self, dest, field):
-        """Parse the memory limit.
-
-        Read the argument with the given name and use its value to set
-        the "memory_limit" item of the given dictionary.
-
-        dest (dict): a place to store the result.
-        field (string): the name of the argument to use.
-
-        """
-        value = self.get_argument(field, None)
-        if value is None:
-            return
-        if len(value) == 0:
-            dest["memory_limit"] = None
-        else:
-            try:
-                value = int(value)
-            except:
-                raise ValueError("Can't cast %s to float." % value)
-            if not 0 < value:
-                raise ValueError("Invalid memory limit.")
-            dest["memory_limit"] = value
 
     def get_task_type(self, dest, name, params):
         """Parse the task type.

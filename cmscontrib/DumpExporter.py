@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,27 +25,19 @@ exporting and importing again should be idempotent.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import PY3, itervalues, iteritems
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
 gevent.monkey.patch_all()  # noqa
 
 import argparse
-import io
 import json
 import logging
 import os
 import sys
 import tarfile
 import tempfile
+from datetime import date
 
 from sqlalchemy.types import \
     Boolean, Integer, Float, String, Unicode, DateTime, Interval, Enum
@@ -54,15 +45,13 @@ from sqlalchemy.dialects.postgresql import ARRAY, CIDR, JSONB
 
 from cms import rmtree, utf8_decoder
 from cms.db import version as model_version, Codename, Filename, \
-    FilenameSchema, FilenameSchemaArray, Digest
-from cms.db import SessionGen, Contest, User, Task, Submission, UserTest, \
-    SubmissionResult, UserTestResult, PrintJob, enumerate_files
+    FilenameSchema, FilenameSchemaArray, Digest, SessionGen, Contest, User, \
+    Task, Submission, UserTest, SubmissionResult, UserTestResult, PrintJob, \
+    Announcement, Participation, enumerate_files
 from cms.db.filecacher import FileCacher
-
 from cmscommon.datetime import make_timestamp
 from cmscommon.digest import path_digest
 
-from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +127,7 @@ def encode_value(type_, value):
         raise RuntimeError("Unknown SQLAlchemy column type: %s" % type_)
 
 
-class DumpExporter(object):
+class DumpExporter:
 
     """This service exports every data that CMS knows. The process of
     exporting and importing again should be idempotent.
@@ -147,13 +136,16 @@ class DumpExporter(object):
 
     def __init__(self, contest_ids, export_target,
                  dump_files, dump_model, skip_generated,
-                 skip_submissions, skip_user_tests, skip_print_jobs):
+                 skip_submissions, skip_user_tests, skip_users, skip_print_jobs):
         if contest_ids is None:
             with SessionGen() as session:
                 contests = session.query(Contest).all()
                 self.contests_ids = [contest.id for contest in contests]
-                users = session.query(User).all()
-                self.users_ids = [user.id for user in users]
+                if not skip_users:
+                    users = session.query(User).all()
+                    self.users_ids = [user.id for user in users]
+                else:
+                    self.users_ids = []
                 tasks = session.query(Task)\
                     .filter(Task.contest_id.is_(None)).all()
                 self.tasks_ids = [task.id for task in tasks]
@@ -169,6 +161,7 @@ class DumpExporter(object):
         self.skip_generated = skip_generated
         self.skip_submissions = skip_submissions
         self.skip_user_tests = skip_user_tests
+        self.skip_users = skip_users
         self.skip_print_jobs = skip_print_jobs
         self.export_target = export_target
 
@@ -219,6 +212,7 @@ class DumpExporter(object):
                         session, contest,
                         skip_submissions=self.skip_submissions,
                         skip_user_tests=self.skip_user_tests,
+                        skip_users=self.skip_users,
                         skip_print_jobs=self.skip_print_jobs,
                         skip_generated=self.skip_generated)
                     for file_ in files:
@@ -248,7 +242,7 @@ class DumpExporter(object):
                         self.get_id(obj)
 
                 # Specify the "root" of the data graph
-                data["_objects"] = list(itervalues(self.ids))
+                data["_objects"] = list(self.ids.values())
 
                 while len(self.queue) > 0:
                     obj = self.queue.pop(0)
@@ -258,12 +252,8 @@ class DumpExporter(object):
                 data["_version"] = model_version
 
                 destination = os.path.join(export_dir, "contest.json")
-                if PY3:
-                    with io.open(destination, "wt", encoding="utf-8") as fout:
-                        json.dump(data, fout, indent=4, sort_keys=True)
-                else:
-                    with io.open(destination, "wb") as fout:
-                        json.dump(data, fout, indent=4, sort_keys=True)
+                with open(destination, "wt", encoding="utf-8") as fout:
+                    json.dump(data, fout, indent=4, sort_keys=True)
 
         # If the admin requested export to file, we do that.
         if archive_info["write_mode"] != "":
@@ -332,6 +322,17 @@ class DumpExporter(object):
             if self.skip_user_tests and other_cls is UserTest:
                 continue
 
+            if self.skip_users:
+                skip = False
+                # User-related classes reachable from root
+                for rel_class in [Participation, Submission, UserTest,
+                                  Announcement]:
+                    if other_cls is rel_class:
+                        skip = True
+                        break
+                if skip:
+                    continue
+
             # Skip print jobs if requested
             if self.skip_print_jobs and other_cls is PrintJob:
                 continue
@@ -350,7 +351,7 @@ class DumpExporter(object):
                 data[prp.key] = list(self.get_id(i) for i in val)
             elif isinstance(val, dict):
                 data[prp.key] = \
-                    dict((k, self.get_id(v)) for k, v in iteritems(val))
+                    dict((k, self.get_id(v)) for k, v in val.items())
             else:
                 raise RuntimeError("Unknown SQLAlchemy relationship type: %s"
                                    % type(val))
@@ -389,7 +390,7 @@ class DumpExporter(object):
 
         # If applicable, retrieve also the description
         if descr_path is not None:
-            with io.open(descr_path, 'wt', encoding='utf-8') as fout:
+            with open(descr_path, 'wt', encoding='utf-8') as fout:
                 fout.write(self.file_cacher.describe(digest))
 
         return True
@@ -412,6 +413,8 @@ def main():
                         help="don't export submissions")
     parser.add_argument("-U", "--no-user-tests", action="store_true",
                         help="don't export user tests")
+    parser.add_argument("-X", "--no-users", action="store_true",
+                        help="don't export users")
     parser.add_argument("-P", "--no-print-jobs", action="store_true",
                         help="don't export print jobs")
     parser.add_argument("export_target", action="store",
@@ -427,6 +430,7 @@ def main():
                             skip_generated=args.no_generated,
                             skip_submissions=args.no_submissions,
                             skip_user_tests=args.no_user_tests,
+                            skip_users=args.no_users,
                             skip_print_jobs=args.no_print_jobs)
     success = exporter.do_export()
     return 0 if success is True else 1

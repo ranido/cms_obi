@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -23,27 +22,16 @@
 
 """Utilities dealing with encryption and randomness."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import bcrypt
 import binascii
 import random
-
 from string import ascii_lowercase
 
-from Crypto import Random
-from Crypto.Cipher import AES
+import bcrypt
+from Cryptodome import Random
+from Cryptodome.Cipher import AES
 
 from cmscommon.binary import bin_to_hex, hex_to_bin, bin_to_b64, b64_to_bin
 
-# ranido-begin
-from cmscommon.hashers import check_pbkdf2_password, PBKDF2PasswordHasher
-# ranido-end
 
 __all__ = [
     "get_random_key", "get_hex_random_key",
@@ -198,14 +186,7 @@ def validate_password(authentication, password):
         the method is not known.
 
     """
-
-    # ranido-begin
-    #import logging
-    #logger = logging.getLogger(__name__)
-    #logger.info("validate_password %s  %s.", authentication, password)
-    # ranido-end
     method, payload = parse_authentication(authentication)
-
     if method == "bcrypt":
         password = password.encode('utf-8')
         payload = payload.encode('utf-8')
@@ -215,10 +196,6 @@ def validate_password(authentication, password):
             return False
     elif method == "plaintext":
         return payload == password
-    # ranido-begin
-    elif method == "pbkdf2":
-        return check_pbkdf2_password(password, payload)
-    # ranido-end
     else:
         raise ValueError("Authentication method not known.")
 
@@ -252,12 +229,6 @@ def hash_password(password, method="bcrypt"):
         payload = bcrypt.hashpw(password, bcrypt.gensalt()).decode('ascii')
     elif method == "plaintext":
         payload = password
-    # ranido-begin
-    elif method == "pbkdf2":
-        hasher = PBKDF2PasswordHasher()
-        password = password.encode('utf-8')
-        payload = hasher.encode(password, hasher.salt())
-    # ranido-end
     else:
         raise ValueError("Authentication method not known.")
 

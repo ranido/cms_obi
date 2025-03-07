@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -24,14 +23,8 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import sys
+import logging
 
 from sqlalchemy import union
 from sqlalchemy.exc import OperationalError
@@ -41,6 +34,9 @@ from . import SessionGen, Digest, Contest, Participation, Statement, \
     Attachment, Task, Manager, Dataset, Testcase, Submission, File, \
     SubmissionResult, Executable, UserTest, UserTestFile, UserTestManager, \
     UserTestResult, UserTestExecutable, PrintJob
+
+
+logger = logging.getLogger(__name__)
 
 
 def test_db_connection():
@@ -55,7 +51,8 @@ def test_db_connection():
         # use it to ensure that the DB is accessible.
         with SessionGen() as session:
             session.execute("select 0;")
-    except OperationalError:
+    except OperationalError as e:
+        logger.error(e)
         raise ConfigError("Operational error while talking to the DB. "
                           "Is the connection string in cms.conf correct?")
 
@@ -277,8 +274,8 @@ def get_datasets_to_judge(task):
 
 def enumerate_files(
         session, contest=None,
-        skip_submissions=False, skip_user_tests=False, skip_print_jobs=False,
-        skip_generated=False):
+        skip_submissions=False, skip_user_tests=False, skip_users=False,
+        skip_print_jobs=False, skip_generated=False):
     """Enumerate all the files (by digest) referenced by the
     contest.
 
@@ -305,7 +302,7 @@ def enumerate_files(
     queries.append(dataset_q.join(Dataset.testcases)
                    .with_entities(Testcase.output))
 
-    if not skip_submissions:
+    if not skip_submissions and not skip_users:
         submission_q = task_q.join(Task.submissions)
         queries.append(submission_q.join(Submission.files)
                        .with_entities(File.digest))
@@ -315,7 +312,7 @@ def enumerate_files(
                            .join(SubmissionResult.executables)
                            .with_entities(Executable.digest))
 
-    if not skip_user_tests:
+    if not skip_user_tests and not skip_users:
         user_test_q = task_q.join(Task.user_tests)
         queries.append(user_test_q.with_entities(UserTest.input))
         queries.append(user_test_q.join(UserTest.files)
@@ -328,9 +325,10 @@ def enumerate_files(
             queries.append(user_test_result_q.join(UserTestResult.executables)
                            .with_entities(UserTestExecutable.digest))
             queries.append(user_test_result_q
+                           .filter(UserTestResult.output != None)
                            .with_entities(UserTestResult.output))
 
-    if not skip_print_jobs:
+    if not skip_print_jobs and not skip_users:
         queries.append(contest_q.join(Contest.participations)
                        .join(Participation.printjobs)
                        .with_entities(PrintJob.digest))

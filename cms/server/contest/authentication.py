@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,19 +25,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import ipaddress
 import json
 import logging
 from datetime import timedelta
 
+# ranido-begin
 from sqlalchemy import update
+# ranido-end
 from sqlalchemy.orm import contains_eager, joinedload
 
 from cms import config
@@ -53,35 +47,18 @@ __all__ = ["validate_login", "authenticate_request"]
 logger = logging.getLogger(__name__)
 
 
-def safe_validate_password(participation, password):
-    """Check that the password is correct for the authentication.
-
-    Validate the given password against the participation (using either
-    the global or the contest-specific password that is stored in the
-    database), and guard against a misconfiguration.
+def get_password(participation):
+    """Return the password the participation can log in with.
 
     participation (Participation): a participation.
-    password (str): a password provided by someone trying to log in
-        claiming to be the given participation.
 
-    return (bool): whether the password matches the expected one.
+    return (str): the password that is on record for them.
 
     """
     if participation.password is None:
-        correct_password = participation.user.password
+        return participation.user.password
     else:
-        correct_password = participation.password
-
-    try:
-        password_valid = validate_password(correct_password, password)
-    except ValueError as e:
-        # This is either a programming or a configuration error.
-        logger.warning(
-            "Invalid password stored in database for user %s in contest %s: "
-            "%s", participation.user.username, participation.contest.name, e)
-        return False
-
-    return password_valid
+        return participation.password
 
 
 def validate_login(
@@ -133,44 +110,26 @@ def validate_login(
         log_failed_attempt("user not registered to contest")
         return None, None
 
-    if not safe_validate_password(participation, password):
+    correct_password = get_password(participation)
+
+    try:
+        password_valid = validate_password(correct_password, password)
+    except ValueError as e:
+        # This is either a programming or a configuration error.
+        logger.warning(
+            "Invalid password stored in database for user %s in contest %s: "
+            "%s", participation.user.username, participation.contest.name, e)
+        return None, None
+
+    if not password_valid:
         log_failed_attempt("wrong password")
         return None, None
 
-    # ranido-begin
-    
-    # if contest.ip_restriction and participation.ip is not None \
-    #         and not any(ip_address in network for network in participation.ip):
-    #     log_failed_attempt("unauthorized IP address")
-    #     return None, None
-    
-    logger.info("Attempt login from IP address %s, as user %r, on "
-                "contest %s, at %s", ip_address, username, contest.name,
-                timestamp)
+    if contest.ip_restriction and participation.ip is not None \
+            and not any(ip_address in network for network in participation.ip):
+        log_failed_attempt("unauthorized IP address")
+        return None, None
 
-    if participation.ip is None:
-        #first time, fix the contestant ip
-        logger.info("First login from IP address %s, as user %r, on "
-                    "contest %s, at %s", ip_address, username, contest.name,
-                    timestamp)
-    else:
-        logger.info("NEW login from IP address %s, as user %r, on "
-                    "contest %s, at %s", ip_address, username, contest.name,
-                    timestamp)
-
-
-    ip_address = ((str(ip_address)),)
-    sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
-    sql_session.commit()
-    logger.info(f"saved IP, {participation.ip}")
-        
-    # if contest.ip_restriction:
-    #     if not any(ip_address in network for network in participation.ip):
-    #         log_failed_attempt("unauthorized IP address")
-    #         return None, None
-
-    # ranido-end
-    
     if contest.block_hidden_participations and participation.hidden:
         log_failed_attempt("participation is hidden and unauthorized")
         return None, None
@@ -179,8 +138,29 @@ def validate_login(
                 "contest %s, at %s", ip_address, username, contest.name,
                 timestamp)
 
+    # If hashing is used, the cookie stores the hashed password so that
+    # the expensive bcrypt call doesn't need to be done at every request
+
+    # ranido-begin
+    # if participation.ip is None:
+    #     #first time, fix the contestant ip
+    #     logger.info("First login from IP address %s, as user %r, on "
+    #                 "contest %s, at %s", ip_address, participation.user.username, contest.name,
+    #                 timestamp)
+    # else:
+    #     logger.info("NEW login from IP address %s, as user %r, on "
+    #                 "contest %s, at %s", ip_address, participation.user.username, contest.name,
+    #                 timestamp)
+
+    # ip_address = ((str(ip_address)),)
+    # sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
+    # sql_session.commit()
+    # logger.info(f"saved IP, {participation.ip}")
+    # ranido-end
+
+    .
     return (participation,
-            json.dumps([username, password, make_timestamp(timestamp)])
+            json.dumps([username, correct_password, make_timestamp(timestamp)])
                 .encode("utf-8"))
 
 
@@ -258,42 +238,6 @@ def authenticate_request(
             ip_address, contest.name, participation.user.username, timestamp)
         return None, None
 
-    # ranido-begin
-    
-    # if contest.ip_restriction and participation.ip is not None \
-    #         and not any(ip_address in network for network in participation.ip):
-    #     log_failed_attempt("unauthorized IP address")
-    #     return None, None
-
-    logger.info("Attempt login from IP address %s, as user %r, on "
-                "contest %s, at %s", ip_address, participation.user.username, contest.name,
-                timestamp)
-
-    if participation.ip is None:
-        #first time, fix the contestant ip
-        logger.info("First login from IP address %s, as user %r, on "
-                    "contest %s, at %s", ip_address, participation.user.username, contest.name,
-                    timestamp)
-    else:
-        logger.info("NEW login from IP address %s, as user %r, on "
-                    "contest %s, at %s", ip_address, participation.user.username, contest.name,
-                    timestamp)
-
-
-    ip_address = ((str(ip_address)),)
-    sql_session.query(Participation).filter(Participation.id == participation.id).update({'ip': ip_address})
-    sql_session.commit()
-    logger.info(f"saved IP, {participation.ip}")
-
-    # if contest.ip_restriction:
-    #     if not any(ip_address in network for network in participation.ip):
-    #         log_failed_attempt("unauthorized IP address")
-    #         return None, None
-
-
-    # ranido-end
-    
-    
     # Check that the user is not hidden if hidden users are blocked.
     if contest.block_hidden_participations and participation.hidden:
         logger.info(
@@ -321,12 +265,6 @@ def _authenticate_request_by_ip_address(sql_session, contest, ip_address):
         matching the remote IP address.
 
     """
-
-    # ranido-begin
-    return None
-    # ranido-end
-
-    
     # We encode it as a network (i.e., we assign it a /32 or /128 mask)
     # since we're comparing it for equality with other networks.
     ip_network = ipaddress.ip_network((ip_address, ip_address.max_prefixlen))
@@ -383,11 +321,6 @@ def _authenticate_request_from_cookie(sql_session, contest, timestamp, cookie):
         None in case of errors.
 
     """
-
-    # ranido-begin
-    #return None, None
-    # ranido-end
-    
     if cookie is None:
         logger.info("Unsuccessful cookie authentication: no cookie provided")
         return None, None
@@ -426,7 +359,11 @@ def _authenticate_request_from_cookie(sql_session, contest, timestamp, cookie):
         log_failed_attempt("user not registered to contest")
         return None, None
 
-    if not safe_validate_password(participation, password):
+    correct_password = get_password(participation)
+
+    # We compare hashed password because it would be too expensive to
+    # re-hash the user-provided plaintext password at every request.
+    if password != correct_password:
         log_failed_attempt("wrong password")
         return None, None
 
@@ -434,6 +371,8 @@ def _authenticate_request_from_cookie(sql_session, contest, timestamp, cookie):
                 "returning from %s, at %s", username, contest.name, last_update,
                 timestamp)
 
+    # We store the hashed password (if hashing is used) so that the
+    # expensive bcrypt hashing doesn't need to be done at every request.
     return (participation,
-            json.dumps([username, password, make_timestamp(timestamp)])
+            json.dumps([username, correct_password, make_timestamp(timestamp)])
                 .encode("utf-8"))

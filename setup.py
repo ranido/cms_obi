@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -29,17 +28,8 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-# setuptools doesn't seem to like this:
-# from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import io
-import re
 import os
+import re
 
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py
@@ -54,13 +44,14 @@ PACKAGE_DATA = {
         "admin/static/sh/*.*",
         "admin/templates/*.*",
         "admin/templates/fragments/*.*",
-        "admin/templates/views/*.*",
+        "admin/templates/macro/*.*",
         "contest/static/*.*",
         "contest/static/css/*.*",
         "contest/static/img/*.*",
         "contest/static/img/mimetypes/*.*",
         "contest/static/js/*.*",
         "contest/templates/*.*",
+        "contest/templates/macro/*.*",
     ],
     "cms.service": [
         "templates/printing/*.*",
@@ -103,9 +94,9 @@ PACKAGE_DATA = {
 def find_version():
     """Return the version string obtained from cms/__init__.py"""
     path = os.path.join("cms", "__init__.py")
-    version_file = io.open(path, "rt", encoding="utf-8").read()
-    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
-                              version_file, re.M)
+    with open(path, "rt", encoding="utf-8") as f:
+        version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
+                                  f.read(), re.M)
     if version_match is not None:
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
@@ -121,8 +112,7 @@ class build_py_and_l10n(build_py):
         # and compiles a list of data files before run() is called and
         # then stores that value. Hence we need to refresh it.
         self.data_files = self._get_data_files()
-        # Can't use super here as in Py2 it isn't a new-style class.
-        build_py.run(self)
+        super().run()
 
 
 setup(
@@ -132,37 +122,36 @@ setup(
     author_email="contestms@googlegroups.com",
     url="https://github.com/cms-dev/cms",
     download_url="https://github.com/cms-dev/cms/archive/master.tar.gz",
-    description="A contest management system and grader "
-                "for IOI-like programming competitions",
+    description="A contest management system and grader for IOI-like programming competitions",
     packages=find_packages(),
     package_data=PACKAGE_DATA,
     cmdclass={"build_py": build_py_and_l10n},
-    scripts=["scripts/cmsLogService",
-             "scripts/cmsScoringService",
-             "scripts/cmsEvaluationService",
-             "scripts/cmsWorker",
-             "scripts/cmsResourceService",
-             "scripts/cmsChecker",
-             "scripts/cmsContestWebServer",
-             "scripts/cmsAdminWebServer",
-             "scripts/cmsProxyService",
-             "scripts/cmsPrintingService",
-             "scripts/cmsRankingWebServer",
-             "scripts/cmsInitDB",
-             "scripts/cmsDropDB"],
+    scripts=[
+        "scripts/cmsLogService",
+        "scripts/cmsScoringService",
+        "scripts/cmsEvaluationService",
+        "scripts/cmsWorker",
+        "scripts/cmsResourceService",
+        "scripts/cmsChecker",
+        "scripts/cmsContestWebServer",
+        "scripts/cmsAdminWebServer",
+        "scripts/cmsProxyService",
+        "scripts/cmsPrintingService",
+        "scripts/cmsRankingWebServer",
+        "scripts/cmsInitDB",
+        "scripts/cmsDropDB",
+    ],
     entry_points={
         "console_scripts": [
-            "cmsRunTests=cmstestsuite.RunTests:main",
+            "cmsRunFunctionalTests=cmstestsuite.RunFunctionalTests:main",
             "cmsAddAdmin=cmscontrib.AddAdmin:main",
             "cmsAddParticipation=cmscontrib.AddParticipation:main",
             "cmsAddStatement=cmscontrib.AddStatement:main",
             "cmsAddSubmission=cmscontrib.AddSubmission:main",
-            "cmsAddSubmissionOBI=cmscontrib.AddSubmissionOBI:main",
             "cmsAddTeam=cmscontrib.AddTeam:main",
             "cmsAddTestcases=cmscontrib.AddTestcases:main",
             "cmsAddUser=cmscontrib.AddUser:main",
             "cmsCleanFiles=cmscontrib.CleanFiles:main",
-            "cmsComputeComplexity=cmscontrib.ComputeComplexity:main",
             "cmsDumpExporter=cmscontrib.DumpExporter:main",
             "cmsDumpImporter=cmscontrib.DumpImporter:main",
             "cmsDumpUpdater=cmscontrib.DumpUpdater:main",
@@ -179,10 +168,9 @@ setup(
             "cmsRemoveTask=cmscontrib.RemoveTask:main",
             "cmsRemoveUser=cmscontrib.RemoveUser:main",
             "cmsSpoolExporter=cmscontrib.SpoolExporter:main",
-            # ranido-begin
-            "cmsUpdatePassword=cmscontrib.UpdatePassword:main",
-            # ranido-end
             "cmsMake=cmstaskenv.cmsMake:main",
+            "cmsPrometheusExporter=cmscontrib.PrometheusExporter:main",
+            "cmsTelegramBot=cmscontrib.TelegramBot:main",
         ],
         "cms.grading.tasktypes": [
             "Batch=cms.grading.tasktypes.Batch:Batch",
@@ -197,20 +185,19 @@ setup(
             "GroupThreshold=cms.grading.scoretypes.GroupThreshold:GroupThreshold",
         ],
         "cms.grading.languages": [
+            "C++11 / g++=cms.grading.languages.cpp11_gpp:Cpp11Gpp",
+            "C++14 / g++=cms.grading.languages.cpp14_gpp:Cpp14Gpp",
             "C++17 / g++=cms.grading.languages.cpp17_gpp:Cpp17Gpp",
-            #"C++11 / g++=cms.grading.languages.cpp11_gpp:Cpp11Gpp",
-            "C17 / gcc=cms.grading.languages.c17_gcc:C17Gcc",
-            #"C11 / gcc=cms.grading.languages.c11_gcc:C11Gcc",
-            #"C# / Mono=cms.grading.languages.csharp_mono:CSharpMono",
-            #"Haskell / ghc=cms.grading.languages.haskell_ghc:HaskellGhc",
+            "C++20 / g++=cms.grading.languages.cpp20_gpp:Cpp20Gpp",
+            "C11 / gcc=cms.grading.languages.c11_gcc:C11Gcc",
+            "C# / Mono=cms.grading.languages.csharp_mono:CSharpMono",
+            "Haskell / ghc=cms.grading.languages.haskell_ghc:HaskellGhc",
             "Java / JDK=cms.grading.languages.java_jdk:JavaJDK",
-            #"Java 1.4 / gcj=cms.grading.languages.java14_gcj:Java14Gcj",
-            "Javascript=cms.grading.languages.javascript:Javascript",
-            #"Pascal / fpc=cms.grading.languages.pascal_fpc:PascalFpc",
-            #"PHP=cms.grading.languages.php:Php",
+            "Pascal / fpc=cms.grading.languages.pascal_fpc:PascalFpc",
+            "PHP=cms.grading.languages.php:Php",
             "Python 3 / CPython=cms.grading.languages.python3_cpython:Python3CPython",
-            #"Python 2 / CPython=cms.grading.languages.python2_cpython:Python2CPython",
-            #"Rust=cms.grading.languages.rust:Rust",
+            "Python 3 / PyPy=cms.grading.languages.python3_pypy:Python3PyPy",
+            "Rust=cms.grading.languages.rust:Rust",
         ],
     },
     keywords="ioi programming contest grader management system",
@@ -219,9 +206,7 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Natural Language :: English",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.6",
-        "License :: OSI Approved :: "
-        "GNU Affero General Public License v3",
-    ]
+        "Programming Language :: Python :: 3.9",
+        "License :: OSI Approved :: GNU Affero General Public License v3",
+    ],
 )

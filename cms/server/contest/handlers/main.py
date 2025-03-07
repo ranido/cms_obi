@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -9,7 +8,8 @@
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2015-2016 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2015-2018 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2021 Grace Hawkins <amoomajid99@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,32 +28,38 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import ipaddress
 import json
 import logging
+import os.path
+import re
 
-import tornado.web
+import collections
+try:
+    collections.MutableMapping
+except:
+    # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
+    collections.MutableMapping = collections.abc.MutableMapping
+
+try:
+    import tornado4.web as tornado_web
+except ImportError:
+    import tornado.web as tornado_web
+from sqlalchemy.orm.exc import NoResultFound
 
 from cms import config
-from cms.db import PrintJob
+from cms.db import PrintJob, User, Participation, Team
+from cms.grading.languagemanager import get_language
 from cms.grading.steps import COMPILATION_MESSAGES, EVALUATION_MESSAGES
 from cms.server import multi_contest
 from cms.server.contest.authentication import validate_login
 from cms.server.contest.communication import get_communications
 from cms.server.contest.printing import accept_print_job, PrintingDisabled, \
     UnacceptablePrintJob
+from cmscommon.crypto import hash_password, validate_password
 from cmscommon.datetime import make_datetime, make_timestamp
-
-from ..phase_management import actual_phase_required
-
 from .contest import ContestHandler
+from ..phase_management import actual_phase_required
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +77,134 @@ class MainHandler(ContestHandler):
     @multi_contest
     def get(self):
         self.render("overview.html", **self.r_params)
+
+
+class RegistrationHandler(ContestHandler):
+    """Registration handler.
+
+    Used to create a participation when this is allowed.
+    If `new_user` argument is true, it creates a new user too.
+
+    """
+
+    MAX_INPUT_LENGTH = 50
+    MIN_PASSWORD_LENGTH = 6
+
+    @multi_contest
+    def post(self):
+        if not self.contest.allow_registration:
+            raise tornado_web.HTTPError(404)
+
+        create_new_user = self.get_argument("new_user") == "true"
+
+        # Get or create user
+        if create_new_user:
+            user = self._create_user()
+        else:
+            user = self._get_user()
+
+            # Check if the participation exists
+            contest = self.contest
+            tot_participants = self.sql_session.query(Participation)\
+                                   .filter(Participation.user == user)\
+                                   .filter(Participation.contest == contest)\
+                                   .count()
+            if tot_participants > 0:
+                raise tornado_web.HTTPError(409)
+
+        # Create participation
+        team = self._get_team()
+        participation = Participation(user=user, contest=self.contest,
+                                      team=team)
+        self.sql_session.add(participation)
+
+        self.sql_session.commit()
+
+        self.finish(user.username)
+
+    @multi_contest
+    def get(self):
+        if not self.contest.allow_registration:
+            raise tornado_web.HTTPError(404)
+
+        self.r_params["MAX_INPUT_LENGTH"] = self.MAX_INPUT_LENGTH
+        self.r_params["MIN_PASSWORD_LENGTH"] = self.MIN_PASSWORD_LENGTH
+        self.r_params["teams"] = self.sql_session.query(Team)\
+                                     .order_by(Team.name).all()
+
+        self.render("register.html", **self.r_params)
+
+    def _create_user(self):
+        try:
+            first_name = self.get_argument("first_name")
+            last_name = self.get_argument("last_name")
+            username = self.get_argument("username")
+            password = self.get_argument("password")
+            email = self.get_argument("email")
+            if len(email) == 0:
+                email = None
+
+            if not 1 <= len(first_name) <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+            if not 1 <= len(last_name) <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+            if not 1 <= len(username) <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+            if not re.match(r"^[A-Za-z0-9_-]+$", username):
+                raise ValueError()
+            if not self.MIN_PASSWORD_LENGTH <= len(password) \
+                    <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+        except (tornado_web.MissingArgumentError, ValueError):
+            raise tornado_web.HTTPError(400)
+
+        # Override password with its hash
+        password = hash_password(password)
+
+        # Check if the username is available
+        tot_users = self.sql_session.query(User)\
+                        .filter(User.username == username).count()
+        if tot_users != 0:
+            # HTTP 409: Conflict
+            raise tornado_web.HTTPError(409)
+
+        # Store new user
+        user = User(first_name, last_name, username, password, email=email)
+        self.sql_session.add(user)
+
+        return user
+
+    def _get_user(self):
+        username = self.get_argument("username")
+        password = self.get_argument("password")
+
+        # Find user if it exists
+        user = self.sql_session.query(User)\
+                        .filter(User.username == username)\
+                        .first()
+        if user is None:
+            raise tornado_web.HTTPError(404)
+
+        # Check if password is correct
+        if not validate_password(user.password, password):
+            raise tornado_web.HTTPError(403)
+
+        return user
+
+    def _get_team(self):
+        # If we have teams, we assume that the 'team' field is mandatory
+        if self.sql_session.query(Team).count() > 0:
+            try:
+                team_code = self.get_argument("team")
+                team = self.sql_session.query(Team)\
+                           .filter(Team.code == team_code)\
+                           .one()
+            except (tornado_web.MissingArgumentError, NoResultFound):
+                raise tornado_web.HTTPError(400)
+        else:
+            team = None
+
+        return team
 
 
 class LoginHandler(ContestHandler):
@@ -94,26 +228,12 @@ class LoginHandler(ContestHandler):
         username = self.get_argument("username", "")
         password = self.get_argument("password", "")
 
-        # ranido-begin
-        # sometimes your application will be behind a proxy, for example if
-        # you use nginx and UWSGI and you will always get something like 127.0.0.1
-        # for the remote IP. In this case you need to check the headers too
-
-        # old code
-        # try:
-        #     # In py2 Tornado gives us the IP address as a native binary
-        #     # string, whereas ipaddress wants text (unicode) strings.
-        #     ip_address = ipaddress.ip_address(str(self.request.remote_ip))
-        # except ValueError:
-        #     logger.warning("Invalid IP address provided by Tornado: %s",
-        #                    self.request.remote_ip)
-        #     return None
-
-        # new code
         try:
-            # In py2 Tornado gives us the IP address as a native binary
-            # string, whereas ipaddress wants text (unicode) strings.
-            ip_address = ipaddress.ip_address(str(self.request.remote_ip))
+            # ranido-begin
+            # sometimes your application will be behind a proxy, for example if
+            # you use nginx and UWSGI and you will always get something like 127.0.0.1
+            # for the remote IP. In this case you need to check the headers too
+            #ip_address = ipaddress.ip_address(self.request.remote_ip)
             real_ip = self.request.headers.get("X-Real-IP") or \
                 self.request.headers.get("X-Forwarded-For") or \
                 self.request.remote_ip
@@ -121,9 +241,9 @@ class LoginHandler(ContestHandler):
             # ranido-end
         except ValueError:
             logger.warning("Invalid IP address provided by Tornado: %s",
-                           real_ip)
-        # ranido-end
-        
+                           self.request.remote_ip)
+            return None
+
         participation, cookie = validate_login(
             self.sql_session, self.contest, self.timestamp, username, password,
             ip_address)
@@ -146,7 +266,7 @@ class StartHandler(ContestHandler):
     Used by a user who wants to start their per_user_time.
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @actual_phase_required(-1)
     @multi_contest
     def post(self):
@@ -176,7 +296,7 @@ class NotificationsHandler(ContestHandler):
 
     refresh_cookie = False
 
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @multi_contest
     def get(self):
         participation = self.current_user
@@ -207,14 +327,14 @@ class PrintingHandler(ContestHandler):
     """Serve the interface to print and handle submitted print jobs.
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @actual_phase_required(0)
     @multi_contest
     def get(self):
         participation = self.current_user
 
         if not self.r_params["printing_enabled"]:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         printjobs = self.sql_session.query(PrintJob)\
             .filter(PrintJob.participation == participation)\
@@ -229,7 +349,7 @@ class PrintingHandler(ContestHandler):
                     pdf_printing_allowed=config.pdf_printing_allowed,
                     **self.r_params)
 
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @actual_phase_required(0)
     @multi_contest
     def post(self):
@@ -239,9 +359,9 @@ class PrintingHandler(ContestHandler):
                 self.timestamp, self.request.files)
             self.sql_session.commit()
         except PrintingDisabled:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
         except UnacceptablePrintJob as e:
-            self.notify_error(e.subject, e.text)
+            self.notify_error(e.subject, e.text, e.text_params)
         else:
             self.service.printing_service.new_printjob(printjob_id=printjob.id)
             self.notify_success(N_("Print job received"),
@@ -255,10 +375,24 @@ class DocumentationHandler(ContestHandler):
     ...) of the contest.
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @multi_contest
     def get(self):
+        contest = self.r_params.get("contest")
+        languages = [get_language(lang) for lang in contest.languages]
+
+        language_docs = []
+        if config.docs_path is not None:
+            for language in languages:
+                ext = language.source_extensions[0][1:] # remove dot
+                path = os.path.join(config.docs_path, ext)
+                if os.path.exists(path):
+                    language_docs.append((language.name, ext))
+        else:
+            language_docs.append(("C++", "en"))
+
         self.render("documentation.html",
                     COMPILATION_MESSAGES=COMPILATION_MESSAGES,
                     EVALUATION_MESSAGES=EVALUATION_MESSAGES,
+                    language_docs=language_docs,
                     **self.r_params)

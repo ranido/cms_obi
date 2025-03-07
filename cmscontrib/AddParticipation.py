@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2017 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -23,13 +22,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
@@ -41,12 +33,12 @@ import ipaddress
 import logging
 import sys
 
+from sqlalchemy.exc import IntegrityError
+
 from cms import utf8_decoder
 from cms.db import Contest, Participation, SessionGen, Team, User, \
     ask_for_contest
 from cmscommon.crypto import build_password, hash_password
-
-from sqlalchemy.exc import IntegrityError
 
 
 logger = logging.getLogger(__name__)
@@ -144,12 +136,6 @@ def main():
         "--bcrypt", dest="method", action="store_const", const="bcrypt",
         help="whether the password will be stored in bcrypt-hashed format "
              "(if omitted it will be stored in plain text)")
-    # ranido-begin
-    method_group.add_argument(
-        "--pbkdf2", dest="method", action="store_const", const="pbkdf2",
-        help="whether the password will be stored in pbkdf2-hashed format "
-             "(if omitted it will be stored in plain text)")
-    # ranido-end
 
     args = parser.parse_args()
 

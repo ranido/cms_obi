@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -25,28 +24,20 @@ filters, tests, etc. that are useful for generic global usage.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, itervalues, iteritems
-
 from jinja2 import Environment, StrictUndefined, contextfilter, \
     contextfunction, environmentfunction
 
-from cms.db import SubmissionResult, UserTestResult
-from cmscommon.datetime import make_datetime, make_timestamp, utc, local_tz
-from cmscommon.mimetypes import get_type_for_file_name, get_name_for_type, \
-    get_icon_for_type
 from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE, \
     TOKEN_MODE_MIXED, FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
+from cms.db import SubmissionResult, UserTestResult
 from cms.grading import format_status_text
 from cms.grading.languagemanager import get_language
 from cms.locale import DEFAULT_TRANSLATION
 from cmscommon.constants import \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
+from cmscommon.datetime import make_datetime, make_timestamp, utc, local_tz
+from cmscommon.mimetypes import get_type_for_file_name, get_name_for_type, \
+    get_icon_for_type
 
 
 @contextfilter
@@ -97,9 +88,8 @@ def any_(ctx, l, test=None, *args):
     return False
 
 
-# FIXME once we drop py2 do dictselect(ctx, d, test=None, *args, by="key")
 @contextfilter
-def dictselect(ctx, d, test=None, *args, **kwargs):
+def dictselect(ctx, d, test=None, *args, by="key"):
     """Filter the given dict: keep only items that pass the given test.
 
     ctx (Context): a Jinja2 context, needed to retrieve the test
@@ -119,13 +109,9 @@ def dictselect(ctx, d, test=None, *args, **kwargs):
         test = bool
     else:
         test = ctx.environment.tests[test]
-    by = kwargs.pop("by", "key")
-    if len(kwargs) > 0:
-        raise ValueError("Invalid keyword argument: %s"
-                         % next(iterkeys(kwargs)))
     if by not in {"key", "value"}:
         raise ValueError("Invalid value of \"by\" keyword argument: %s" % by)
-    return dict((k, v) for k, v in iteritems(d)
+    return dict((k, v) for k, v in d.items()
                 if ctx.call(test, {"key": k, "value": v}[by], *args))
 
 
@@ -147,9 +133,7 @@ def today(ctx, dt):
 
 
 def instrument_generic_toolbox(env):
-    env.globals["iterkeys"] = iterkeys
-    env.globals["itervalues"] = itervalues
-    env.globals["iteritems"] = iteritems
+    env.globals["iter"] = iter
     env.globals["next"] = next
 
     # Needed for some constants.
@@ -179,10 +163,8 @@ def instrument_generic_toolbox(env):
     env.tests["today"] = today
 
 
-# TODO When dropping py2, let the arguments be `env, *, dataset` in
-# order to force the users to pass the dataset as a keyword argument.
 @environmentfunction
-def safe_get_task_type(env, dataset):
+def safe_get_task_type(env, *, dataset):
     try:
         return dataset.task_type_object
     # The task type's constructor is called, which may raise any
@@ -191,10 +173,8 @@ def safe_get_task_type(env, dataset):
         return env.undefined("TaskType not found: %s" % err)
 
 
-# TODO When dropping py2, let the arguments be `env, *, dataset` in
-# order to force the users to pass the dataset as a keyword argument.
 @environmentfunction
-def safe_get_score_type(env, dataset):
+def safe_get_score_type(env, *, dataset):
     try:
         return dataset.score_type_object
     # The score type's constructor is called, which may raise any

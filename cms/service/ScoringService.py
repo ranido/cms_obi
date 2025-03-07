@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,21 +25,12 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
 from cms import ServiceCoord, config
-from cms.io import Executor, TriggeredService, rpc_method
 from cms.db import SessionGen, Submission, Dataset, get_submission_results
-
+from cms.io import Executor, TriggeredService, rpc_method
 from cmscommon.datetime import make_datetime
-
 from .scoringoperations import ScoringOperation, get_operations
 
 
@@ -49,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 class ScoringExecutor(Executor):
     def __init__(self, proxy_service):
-        super(ScoringExecutor, self).__init__()
+        super().__init__()
         self.proxy_service = proxy_service
 
     def execute(self, entry):
@@ -139,7 +129,7 @@ class ScoringService(TriggeredService):
         """Initialize the ScoringService.
 
         """
-        super(ScoringService, self).__init__(shard)
+        super().__init__(shard)
 
         # Set up communication with ProxyService.
         ranking_enabled = len(config.rankings) > 0

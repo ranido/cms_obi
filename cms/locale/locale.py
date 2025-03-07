@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -30,19 +29,10 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-import six
-
 import copy
 import logging
 import math
 import os
-import pkg_resources
 
 import babel.core
 import babel.dates
@@ -50,6 +40,7 @@ import babel.lists
 import babel.numbers
 import babel.support
 import babel.units
+import pkg_resources
 
 from cms import config
 from cmscommon.datetime import utc
@@ -62,7 +53,7 @@ def N_(msgid):
     return msgid
 
 
-class Translation(object):
+class Translation:
     """A shim that bundles all sources of translations for a language
 
     This class is a thin wrapper that collects all message catalogs and
@@ -92,16 +83,10 @@ class Translation(object):
         return self.locale.display_name
 
     def gettext(self, msgid):
-        if six.PY3:
-            return self.translation.gettext(msgid)
-        else:
-            return self.translation.ugettext(msgid)
+        return self.translation.gettext(msgid)
 
     def ngettext(self, msgid1, msgid2, n):
-        if six.PY3:
-            return self.translation.ngettext(msgid1, msgid2, n)
-        else:
-            return self.translation.ungettext(msgid1, msgid2, n)
+        return self.translation.ngettext(msgid1, msgid2, n)
 
     def format_datetime(self, dt, timezone):
         """Return the date and time of dt.
@@ -146,7 +131,7 @@ class Translation(object):
         else:
             return self.format_datetime(dt, timezone)
 
-    SECONDS_PER_HOUR = 3600
+    SECONDS_PER_HOUR = 60 * 60
     SECONDS_PER_MINUTE = 60
 
     def format_timedelta(self, td):
@@ -238,9 +223,8 @@ class Translation(object):
             n /= self.PREFIX_FACTOR
             if n < self.PREFIX_FACTOR:
                 f = copy.copy(self.locale.decimal_formats[None])
-                # We need int because floor returns a float in py2.
                 # if 1000 <= n < 1024 d can be negative, cap to 0 decimals
-                d = max(0, int(2 - math.floor(math.log10(n))))
+                d = max(0, 2 - math.floor(math.log10(n)))
                 f.frac_prec = (d, d)
                 return (self.gettext(unit)
                         % babel.numbers.format_decimal(n, format=f,
@@ -278,10 +262,7 @@ class Translation(object):
             return code
 
     def translate_mimetype(self, mimetype):
-        if six.PY3:
-            return self.mimetype_translation.gettext(mimetype)
-        else:
-            return self.mimetype_translation.ugettext(mimetype)
+        return self.mimetype_translation.gettext(mimetype)
 
 
 DEFAULT_TRANSLATION = Translation("en")

@@ -1,8 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Identifies potential sources issues when using isolate.
 #
 #     (c) 2017 Bernard Blackham <bernard@blackham.com.au>
+#     (c) 2022-2024 Martin Mares <mj@ucw.cz>
+#     (c) 2024 Stephan Gomer <me@sadfun.org>
 #
 
 usage() {
@@ -49,10 +51,17 @@ done
 
 # Some helper boilerplate machinery.
 exit_status=0
-red=$(tput setaf 1)
-green=$(tput setaf 2)
-yellow=$(tput setaf 3)
-normal=$(tput sgr0)
+if [ -n "$TERM" -a "$TERM" != dumb ] ; then
+	red=$(tput setaf 1)
+	green=$(tput setaf 2)
+	yellow=$(tput setaf 3)
+	normal=$(tput sgr0)
+else
+	red=
+	green=
+	yellow=
+	normal=
+fi
 
 # Return true (0) if we are being quiet.
 quiet() {
@@ -61,7 +70,7 @@ quiet() {
 
 # Print all arguments to stderr as warning.
 warn() {
-    quiet || echo WARNING: "$*" >&2
+    quiet || echo "${yellow}WARNING:${normal}" "$*" >&2
 }
 
 # Print first argument to stderr as warning, and second argument to stdout as
@@ -112,15 +121,26 @@ print_finish() {
 cgroup_check() {
     local cgroup=$1
     print_start_check "cgroup support for $cgroup"
-    if ! test -f "/sys/fs/cgroup/$cgroup/tasks" ; then
+    if ! test -f "$cg_root/$cgroup" ; then
         print_dubious
         warn "the $cgroup is not present. isolate --cg cannot be used."
     fi
     print_finish
 }
-cgroup_check memory
-cgroup_check cpuacct
-cgroup_check cpuset
+
+# Check that cgroups are enabled.
+if ! cg_root=$(isolate --print-cg-root 2>/dev/null) ; then
+    warn "cgroup root not found. isolate --cg cannot be used."
+    exit_status=1
+else
+    quiet || echo "Using cgroup root: $cg_root"
+    cgroup_check cpuset.cpus
+    cgroup_check cpuset.mems
+    cgroup_check cpu.stat
+    cgroup_check cgroup.procs
+    cgroup_check memory.events
+    cgroup_check memory.max
+fi
 
 # Check that swap is either disabled or accounted for.
 swap_check() {
@@ -129,9 +149,8 @@ swap_check() {
     local swaps
     swaps=$(swapon --noheadings)
     if [ -n "$swaps" ] ; then
-        # Swap is enabled.  We had better have the memsw support in the memory
-        # cgroup.
-        if ! test -f "/sys/fs/cgroup/memory/memory.memsw.usage_in_bytes" ; then
+        # Swap is enabled.  We had better have the memory.swap support in the memory cgroup.
+        if ! test -f "$cg_root/memory.swap.current" ; then
             print_fail
             action \
                 "swap is enabled, but swap accounting is not. isolate will not be able to enforce memory limits." \
@@ -165,6 +184,42 @@ cpufreq_check() {
     print_finish
 }
 cpufreq_check
+
+# Check that Intel frequency boost is disabled
+intel_boost_check() {
+    print_start_check "Intel frequency boost"
+    local val
+    if val=$(cat /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null) ; then
+        if [ "$val" -ne 1 ] ; then
+            print_fail
+            action \
+                "frequency boosting is enabled." \
+                "echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo"
+        fi
+    else
+        print_skipped
+    fi
+    print_finish
+}
+intel_boost_check
+
+# Check that general frequency boost is disabled
+general_boost_check() {
+    print_start_check "general frequency boost"
+    local val
+    if val=$(cat /sys/devices/system/cpu/cpufreq/boost 2>/dev/null) ; then
+        if [ "$val" -ne 0 ] ; then
+            print_fail
+            action \
+                "frequency boosting is enabled." \
+                "echo 0 > /sys/devices/system/cpu/cpufreq/boost"
+        fi
+    else
+        print_skipped
+    fi
+    print_finish
+}
+general_boost_check
 
 # Check that address space layout randomisation is disabled.
 aslr_check() {
@@ -219,6 +274,45 @@ thp_check() {
     print_finish
 }
 thp_check
+
+# Piping of core dumps to programs can make program crashes significantly
+# slower. Unfortunetely, dumps to pipes are not affected by RLIMIT_CORE,
+# so we cannot easily disable them inside the sandbox.
+core_check() {
+    print_start_check "core file pattern"
+    local val
+    if val="$(cat /proc/sys/kernel/core_pattern)" ; then
+        if [ "${val:0:1}" = '|' ] ; then
+            print_fail
+            action \
+                "core files are piped to a program." \
+                "echo core >/proc/sys/kernel/core_pattern"
+        fi
+    else
+        print_skipped
+    fi
+    print_finish
+}
+core_check
+
+# Without protected_hardlinks, the user running Isolate could trick it into
+# changing ownership of unrelated files.
+hardlink_check() {
+    print_start_check "hard link protection"
+    local val
+    if val="$(cat /proc/sys/fs/protected_hardlinks)" ; then
+        if [ $val = 0 ] ; then
+            print_fail
+            action \
+                "hardlink protection is disabled." \
+                "echo 1 >/proc/sys/fs/protected_hardlinks"
+        fi
+    else
+        print_skipped
+    fi
+    print_finish
+}
+hardlink_check
 
 
 exit $exit_status

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -7,6 +6,8 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 Luca Versari <veluca93@gmail.com>
+# Copyright © 2021 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2023 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,26 +26,20 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import atexit
 import io
 import logging
 import os
 import tempfile
+import fcntl
+from abc import ABCMeta, abstractmethod
 
 import gevent
-
 from sqlalchemy.exc import IntegrityError
 
-from cmscommon.digest import Digester
 from cms import config, mkdir, rmtree
 from cms.db import SessionGen, Digest, FSObject, LargeObject
+from cmscommon.digest import Digester
 
 
 logger = logging.getLogger(__name__)
@@ -73,9 +68,6 @@ def copyfileobj(source_fobj, destination_fobj,
         while len(buffer) > 0:
             gevent.sleep(0)
             written = destination_fobj.write(buffer)
-            # FIXME remove this when we drop py2
-            if written is None:
-                break
             buffer = buffer[written:]
         gevent.sleep(0)
 
@@ -88,11 +80,12 @@ class TombstoneError(RuntimeError):
     pass
 
 
-class FileCacherBackend(object):
+class FileCacherBackend(metaclass=ABCMeta):
     """Abstract base class for all FileCacher backends.
 
     """
 
+    @abstractmethod
     def get_file(self, digest):
         """Retrieve a file from the storage.
 
@@ -104,8 +97,9 @@ class FileCacherBackend(object):
         raise (KeyError): if the file cannot be found.
 
         """
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
+    @abstractmethod
     def create_file(self, digest):
         """Create an empty file that will live in the storage.
 
@@ -119,8 +113,9 @@ class FileCacherBackend(object):
             already stored.
 
         """
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
+    @abstractmethod
     def commit_file(self, fobj, digest, desc=""):
         """Commit a file created by create_file() to be stored.
 
@@ -139,8 +134,9 @@ class FileCacherBackend(object):
             purposes!
 
         """
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
+    @abstractmethod
     def describe(self, digest):
         """Return the description of a file given its digest.
 
@@ -151,8 +147,9 @@ class FileCacherBackend(object):
         raise (KeyError): if the file cannot be found.
 
         """
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
+    @abstractmethod
     def get_size(self, digest):
         """Return the size of a file given its digest.
 
@@ -164,16 +161,18 @@ class FileCacherBackend(object):
         raise (KeyError): if the file cannot be found.
 
         """
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
+    @abstractmethod
     def delete(self, digest):
         """Delete a file from the storage.
 
         digest (unicode): the digest of the file to delete.
 
         """
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
+    @abstractmethod
     def list(self):
         """List the files available in the storage.
 
@@ -181,7 +180,7 @@ class FileCacherBackend(object):
             representing a file in the form (digest, description).
 
         """
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
 
 class FSBackend(FileCacherBackend):
@@ -222,7 +221,7 @@ class FSBackend(FileCacherBackend):
         if not os.path.exists(file_path):
             raise KeyError("File not found.")
 
-        return io.open(file_path, 'rb')
+        return open(file_path, 'rb')
 
     def create_file(self, digest):
         """See FileCacherBackend.create_file().
@@ -364,8 +363,12 @@ class DBBackend(FileCacherBackend):
             # If someone beat us to adding the same object to the database, we
             # should at least drop the large object.
             LargeObject.unlink(fobj.loid)
-            logger.warning("File %s (%s) caused an IntegrityError, ignoring.",
-                           digest, desc)
+            logger.info("File %s (%s) caused an IntegrityError, ignoring. "
+                        "Note: If the file is a compiled submission "
+                        "executable, this can occur when a contestant has "
+                        "submitted identical source code multiple times, "
+                        "and is harmless in that case.",
+                        digest, desc)
             return False
         return True
 
@@ -465,7 +468,7 @@ class NullBackend(FileCacherBackend):
         return list()
 
 
-class FileCacher(object):
+class FileCacher:
     """This class implement a local cache for files stored as FSObject
     in the database.
 
@@ -483,7 +486,7 @@ class FileCacher(object):
     # - The `io' module defines a DEFAULT_BUFFER_SIZE constant, whose
     #   value is 8192.
     # CHUNK_SIZE should be a multiple of these values.
-    CHUNK_SIZE = 2 ** 14  # 16348
+    CHUNK_SIZE = 16 * 1024  # 16 KiB
 
     def __init__(self, service=None, path=None, null=False):
         """Initialize.
@@ -518,15 +521,13 @@ class FileCacher(object):
         self._create_directory_or_die(config.temp_dir)
         self._create_directory_or_die(config.cache_dir)
 
-        if service is None:
+        if not self.is_shared():
             self.file_dir = tempfile.mkdtemp(dir=config.temp_dir)
             # Delete this directory on exit since it has a random name and
             # won't be used again.
             atexit.register(lambda: rmtree(self.file_dir))
         else:
-            self.file_dir = os.path.join(
-                config.cache_dir,
-                "fs-cache-%s-%d" % (service.name, service.shard))
+            self.file_dir = os.path.join(config.cache_dir, "fs-cache-shared")
         self._create_directory_or_die(self.file_dir)
 
         # Temp dir must be a subdirectory of file_dir to avoid cross-filesystem
@@ -536,6 +537,10 @@ class FileCacher(object):
         # Just to make sure it was created.
         self._create_directory_or_die(self.file_dir)
 
+    def is_shared(self):
+        """Return whether the cache directory is shared with other services."""
+        return self.service is not None
+
     @staticmethod
     def _create_directory_or_die(directory):
         """Create directory and ensure it exists, or raise a RuntimeError."""
@@ -544,35 +549,103 @@ class FileCacher(object):
             logger.error(msg)
             raise RuntimeError(msg)
 
-    def load(self, digest, if_needed=False):
-        """Load the file with the given digest into the cache.
+    def precache_lock(self):
+        """Lock the (shared) cache for precaching if it is currently unlocked.
 
-        Ask the backend to provide the file and, if it's available,
-        copy its content into the file-system cache.
+        Locking is optional: Any process can perform normal cache operations
+        at any time whether the cache is locked or not.
 
-        digest (unicode): the digest of the file to load.
-        if_needed (bool): only load the file if it is not present in
-            the local cache.
+        The locking mechanism's only purpose is to avoid wasting resources by
+        ensuring that on each machine, only one worker precaches at any time.
 
-        raise (KeyError): if the backend cannot find the file.
+        return (fileobj|None): The lock file if the cache was previously
+            unlocked. Closing the file object will release the lock.
+            None if the cache was already locked.
+
+        """
+        lock_file = os.path.join(self.file_dir, "cache_lock")
+        fobj = open(lock_file, 'w')
+        returned = False
+        try:
+            fcntl.flock(fobj, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            # This exception is raised only if the errno is EWOULDBLOCK,
+            # which means that the file is already locked.
+            return None
+        else:
+            returned = True
+            return fobj
+        finally:
+            if not returned:
+                fobj.close()
+
+    def _load(self, digest, cache_only):
+        """Load a file into the cache and open it for reading.
+
+        cache_only (bool): don't open the file for reading.
+
+        return (fileobj): a readable binary file-like object from which
+            to read the contents of the file (None if cache_only is True).
+
+        raise (KeyError): if the file cannot be found.
+
+        """
+        cache_file_path = os.path.join(self.file_dir, digest)
+
+        if cache_only:
+            if os.path.exists(cache_file_path):
+                return
+        else:
+            try:
+                return open(cache_file_path, 'rb')
+            except FileNotFoundError:
+                pass
+
+        logger.debug("File %s not in cache, downloading "
+                     "from database.", digest)
+
+        ftmp_handle, temp_file_path = tempfile.mkstemp(dir=self.temp_dir,
+                                                       text=False)
+        with open(ftmp_handle, 'wb') as ftmp, \
+                self.backend.get_file(digest) as fobj:
+            copyfileobj(fobj, ftmp, self.CHUNK_SIZE)
+
+        if not cache_only:
+            # We allow anyone to delete files from the cache directory
+            # self.file_dir at any time. Hence, cache_file_path might no
+            # longer exist an instant after we create it. Opening the
+            # temporary file before renaming it circumvents this issue.
+            # (Note that the temporary file may not be manually deleted!)
+            fd = open(temp_file_path, 'rb')
+
+        # Then move it to its real location (this operation is atomic
+        # by POSIX requirement)
+        os.rename(temp_file_path, cache_file_path)
+
+        logger.debug("File %s downloaded.", digest)
+
+        if not cache_only:
+            return fd
+
+    def cache_file(self, digest):
+        """Load a file into the cache.
+
+        Ask the backend to provide the file and store it in the cache for the
+        benefit of future accesses, unless the file is already cached.
+        Note that the cached file might still be deleted at any time, so it
+        cannot be assumed to actually exist after this function completes.
+        Always use the get_file* functions to access a file.
+
+        digest (unicode): the digest of the file to get.
+
+        raise (KeyError): if the file cannot be found.
         raise (TombstoneError): if the digest is the tombstone
 
         """
         if digest == Digest.TOMBSTONE:
             raise TombstoneError()
-        cache_file_path = os.path.join(self.file_dir, digest)
-        if if_needed and os.path.exists(cache_file_path):
-            return
 
-        ftmp_handle, temp_file_path = tempfile.mkstemp(dir=self.temp_dir,
-                                                       text=False)
-        with io.open(ftmp_handle, 'wb') as ftmp, \
-                self.backend.get_file(digest) as fobj:
-            copyfileobj(fobj, ftmp, self.CHUNK_SIZE)
-
-        # Then move it to its real location (this operation is atomic
-        # by POSIX requirement)
-        os.rename(temp_file_path, cache_file_path)
+        self._load(digest, True)
 
     def get_file(self, digest):
         """Retrieve a file from the storage.
@@ -596,19 +669,10 @@ class FileCacher(object):
         """
         if digest == Digest.TOMBSTONE:
             raise TombstoneError()
-        cache_file_path = os.path.join(self.file_dir, digest)
 
         logger.debug("Getting file %s.", digest)
 
-        if not os.path.exists(cache_file_path):
-            logger.debug("File %s not in cache, downloading "
-                         "from database.", digest)
-
-            self.load(digest)
-
-            logger.debug("File %s downloaded.", digest)
-
-        return io.open(cache_file_path, 'rb')
+        return self._load(digest, False)
 
     def get_file_content(self, digest):
         """Retrieve a file from the storage.
@@ -664,35 +728,8 @@ class FileCacher(object):
         if digest == Digest.TOMBSTONE:
             raise TombstoneError()
         with self.get_file(digest) as src:
-            with io.open(dst_path, 'wb') as dst:
+            with open(dst_path, 'wb') as dst:
                 copyfileobj(src, dst, self.CHUNK_SIZE)
-
-    def save(self, digest, desc=""):
-        """Save the file with the given digest into the backend.
-
-        Use to local copy, available in the file-system cache, to store
-        the file in the backend, if it's not already there.
-
-        digest (unicode): the digest of the file to load.
-        desc (unicode): the (optional) description to associate to the
-            file.
-
-        raise (TombstoneError): if the digest is the tombstone
-
-        """
-        if digest == Digest.TOMBSTONE:
-            raise TombstoneError()
-        cache_file_path = os.path.join(self.file_dir, digest)
-
-        fobj = self.backend.create_file(digest)
-
-        if fobj is None:
-            return
-
-        with io.open(cache_file_path, 'rb') as src:
-            copyfileobj(src, fobj, self.CHUNK_SIZE)
-
-        self.backend.commit_file(fobj, digest, desc)
 
     def put_file_from_fobj(self, src, desc=""):
         """Store a file in the storage.
@@ -742,16 +779,20 @@ class FileCacher(object):
 
             cache_file_path = os.path.join(self.file_dir, digest)
 
-            if not os.path.exists(cache_file_path):
-                os.rename(dst.name, cache_file_path)
-            else:
-                os.unlink(dst.name)
+            # Store the file in the backend. We do that even if the file
+            # was already in the cache
+            # because there's a (small) chance that the file got removed
+            # from the backend but somehow remained in the cache.
+            # We read from the temporary file before moving it to
+            # cache_file_path because the latter might be deleted before
+            # we get a chance to open it.
+            with open(dst.name, 'rb') as src:
+                fobj = self.backend.create_file(digest)
+                if fobj is not None:
+                    copyfileobj(src, fobj, self.CHUNK_SIZE)
+                    self.backend.commit_file(fobj, digest, desc)
 
-        # Store the file in the backend. We do that even if the file
-        # was already in the cache (that is, we ignore the check above)
-        # because there's a (small) chance that the file got removed
-        # from the backend but somehow remained in the cache.
-        self.save(digest, desc)
+            os.rename(dst.name, cache_file_path)
 
         return digest
 
@@ -785,7 +826,7 @@ class FileCacher(object):
         return (unicode): the digest of the stored file.
 
         """
-        with io.open(src_path, 'rb') as src:
+        with open(src_path, 'rb') as src:
             return self.put_file_from_fobj(src, desc)
 
     def describe(self, digest):
@@ -847,6 +888,8 @@ class FileCacher(object):
     def purge_cache(self):
         """Empty the local cache.
 
+        This function must not be called if the cache directory is shared.
+
         """
         self.destroy_cache()
         if not mkdir(config.cache_dir) or not mkdir(self.file_dir):
@@ -859,7 +902,11 @@ class FileCacher(object):
         Nothing that could have been created by this object will be
         left on disk. After that, this instance isn't usable anymore.
 
+        This function must not be called if the cache directory is shared.
+
         """
+        if self.is_shared():
+            raise Exception("You may not destroy a shared cache.")
         rmtree(self.file_dir)
 
     def list(self):

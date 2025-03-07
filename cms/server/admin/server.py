@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,27 +25,18 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, itervalues
-
 import logging
 
-from sqlalchemy import func, not_
+from sqlalchemy import func, not_, literal_column
 
-from cmscommon.binary import hex_to_bin
 from cms import config, ServiceCoord, get_service_shards
 from cms.db import SessionGen, Dataset, Submission, SubmissionResult, Task
 from cms.io import WebService, rpc_method
 from cms.service import EvaluationService
-
+from cmscommon.binary import hex_to_bin
 from .authentication import AWSAuthMiddleware
-from .jinja2_toolbox import AWS_ENVIRONMENT
 from .handlers import HANDLERS
+from .jinja2_toolbox import AWS_ENVIRONMENT
 from .rpc_authorization import rpc_authorization_checker
 
 
@@ -63,12 +53,13 @@ class AdminWebServer(WebService):
                              ("cms.server.admin", "static")],
             "cookie_secret": hex_to_bin(config.secret_key),
             "debug": config.tornado_debug,
+            "num_proxies_used": config.admin_num_proxies_used,
             "auth_middleware": AWSAuthMiddleware,
             "rpc_enabled": True,
             "rpc_auth": self.is_rpc_authorized,
             "xsrf_cookies": True,
         }
-        super(AdminWebServer, self).__init__(
+        super().__init__(
             config.admin_listen_port,
             HANDLERS,
             parameters,
@@ -185,13 +176,17 @@ class AdminWebServer(WebService):
                     .filter(Task.contest_id == contest_id)
             queries['total'] = total_query
 
-            stats = {}
-            keys = list(iterkeys(queries))
+            # Add a "key" column for keeping track of each stats, in case they
+            # get shuffled.
+            for key, query in queries.items():
+                key_column = literal_column(f"'{key}'").label("key")
+                queries[key] = query.add_columns(key_column)
+
+            keys = list(queries.keys())
             results = queries[keys[0]].union_all(
                 *(queries[key] for key in keys[1:])).all()
 
-        for i, k in enumerate(keys):
-            stats[k] = results[i][0]
-        stats['compiling'] += 2 * stats['total'] - sum(itervalues(stats))
+        stats = {key: value for value, key in results}
+        stats['compiling'] += 2 * stats['total'] - sum(stats.values())
 
         return stats

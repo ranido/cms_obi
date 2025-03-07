@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,13 +18,6 @@
 
 """PHP programming language definition."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 from cms.grading import Language
 
 
@@ -34,7 +26,7 @@ __all__ = ["Php"]
 
 class Php(Language):
     """This defines the PHP programming language, interpreted with the
-    standard PHP interpret available in the system.
+    standard PHP interpreter available in the system.
 
     """
 
@@ -48,11 +40,20 @@ class Php(Language):
         """See Language.source_extensions."""
         return [".php"]
 
+    @property
+    def executable_extension(self):
+        """See Language.executable_extension."""
+        return ".php"
+
     def get_compilation_commands(self,
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
-        return [["/bin/cp", source_filenames[0], executable_filename]]
+        if source_filenames[0] != executable_filename:
+            return [["/bin/cp", source_filenames[0], executable_filename]]
+        else:
+            # We need at least one command to collect execution stats.
+            return [["/bin/true"]]
 
     def get_evaluation_commands(
             self, executable_filename, main=None, args=None):

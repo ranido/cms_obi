@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -29,23 +28,24 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
-import tornado.web
+import collections
+try:
+    collections.MutableMapping
+except:
+    # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
+    collections.MutableMapping = collections.abc.MutableMapping
+
+try:
+    import tornado4.web as tornado_web
+except ImportError:
+    import tornado.web as tornado_web
 
 from cms.server import multi_contest
 from cmscommon.mimetypes import get_type_for_file_name
-
-from ..phase_management import actual_phase_required
-
 from .contest import ContestHandler, FileHandler
+from ..phase_management import actual_phase_required
 
 
 logger = logging.getLogger(__name__)
@@ -55,13 +55,13 @@ class TaskDescriptionHandler(ContestHandler):
     """Shows the data of a task in the contest.
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @actual_phase_required(0, 3)
     @multi_contest
     def get(self, task_name):
         task = self.get_task(task_name)
         if task is None:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         self.render("task_description.html", task=task, **self.r_params)
 
@@ -70,16 +70,16 @@ class TaskStatementViewHandler(FileHandler):
     """Shows the statement file of a task in the contest.
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @actual_phase_required(0, 3)
     @multi_contest
     def get(self, task_name, lang_code):
         task = self.get_task(task_name)
         if task is None:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         if lang_code not in task.statements:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         statement = task.statements[lang_code].digest
         self.sql_session.close()
@@ -96,16 +96,16 @@ class TaskAttachmentViewHandler(FileHandler):
     """Shows an attachment file of a task in the contest.
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @actual_phase_required(0, 3)
     @multi_contest
     def get(self, task_name, filename):
         task = self.get_task(task_name)
         if task is None:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         if filename not in task.attachments:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         attachment = task.attachments[filename].digest
         self.sql_session.close()

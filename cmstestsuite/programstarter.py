@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
@@ -21,30 +20,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import itervalues
-
 import atexit
-import errno
-import io
 import json
 import logging
 import os
-import psutil
 import re
 import signal
 import socket
 import subprocess
 import threading
 import time
-from future.moves.urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
-from cmscommon.datetime import monotonic_time
+import psutil
+
 from cmstestsuite import CONFIG, TestException
 from cmstestsuite.coverage import coverage_cmdline
 from cmstestsuite.functionaltestframework import FunctionalTestFramework
@@ -58,7 +47,7 @@ logger = logging.getLogger(__name__)
 _MAX_ATTEMPTS = 20
 
 
-class RemoteService(object):
+class RemoteService:
     """Class which implements the RPC protocol used by CMS.
 
     This is deliberately a re-implementation in order to catch or
@@ -100,7 +89,7 @@ class RemoteService(object):
         return reply
 
 
-class Program(object):
+class Program:
     """An instance of a program, which might be running or not."""
 
     def __init__(self, cms_config, service_name, shard=0, contest=None,
@@ -185,14 +174,10 @@ class Program(object):
             # We try one more time to kill gracefully using Ctrl-C.
             logger.info("Interrupting %s and waiting...", self.coord)
             self.instance.send_signal(signal.SIGINT)
-            # FIXME on py3 this becomes self.instance.wait(timeout=5)
-            t = monotonic_time()
-            while monotonic_time() - t < 5:
-                if self.instance.poll() is not None:
-                    logger.info("Terminated %s.", self.coord)
-                    break
-                time.sleep(0.1)
-            else:
+            try:
+                self.instance.wait(timeout=5)
+                logger.info("Terminated %s.", self.coord)
+            except subprocess.TimeoutExpired:
                 self.kill()
 
     def kill(self):
@@ -225,10 +210,11 @@ class Program(object):
                 self._check_ranking_web_server()
             else:
                 self._check_service()
-        except socket.error as error:
+        except ConnectionRefusedError:
             self.healthy = False
-            if error.errno != errno.ECONNREFUSED:
-                raise TestException("Weird connection state.")
+        except OSError:
+            self.healthy = False
+            raise TestException("Weird connection state.")
         else:
             self.healthy = True
 
@@ -271,8 +257,8 @@ class Program(object):
             stdout = None
             stderr = None
         else:
-            stdout = io.open(os.devnull, "wb")
-            stderr = stdout
+            stdout = subprocess.DEVNULL
+            stderr = subprocess.STDOUT
         instance = subprocess.Popen(cmdline, stdout=stdout, stderr=stderr)
         if self.cpu_limit is not None:
             logger.info("Limiting %s to %d%% CPU time",
@@ -283,7 +269,7 @@ class Program(object):
         return instance
 
 
-class ProgramStarter(object):
+class ProgramStarter:
     """Utility to keep track of all programs started."""
 
     def __init__(self, cpu_limits=None):
@@ -316,7 +302,7 @@ class ProgramStarter(object):
         self._programs[(service_name, shard, contest)] = p
 
     def count_unhealthy(self):
-        return len([p for p in itervalues(self._programs) if not p.healthy])
+        return len([p for p in self._programs.values() if not p.healthy])
 
     def wait(self):
         for attempts in range(_MAX_ATTEMPTS):
@@ -328,12 +314,12 @@ class ProgramStarter(object):
             time.sleep(0.2 * (1.2 ** attempts))
         raise TestException(
             "Failed to bring up services: %s" % ", ".join(
-                p.coord for p in itervalues(self._programs) if not p.healthy))
+                p.coord for p in self._programs.values() if not p.healthy))
 
     def stop_all(self):
-        for p in itervalues(self._programs):
+        for p in self._programs.values():
             p.log_cpu_times()
-        for p in itervalues(self._programs):
+        for p in self._programs.values():
             p.stop()
-        for p in itervalues(self._programs):
+        for p in self._programs.values():
             p.wait_or_kill()

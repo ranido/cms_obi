@@ -1,3 +1,1 @@
-int userfunc(int x) {
-    return x + 1;
-}
+managed-incorrect.cpp

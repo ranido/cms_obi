@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -7,6 +6,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2015 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 Luca Versari <veluca93@gmail.com>
+# Copyright © 2021 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,24 +25,17 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 import time
 
 import gevent.lock
 
-from cms.io import Service, rpc_method
 from cms.db import SessionGen, Contest, enumerate_files
 from cms.db.filecacher import FileCacher, TombstoneError
 from cms.grading import JobException
-from cms.grading.tasktypes import get_task_type
 from cms.grading.Job import CompilationJob, EvaluationJob, JobGroup
+from cms.grading.tasktypes import get_task_type
+from cms.io import Service, rpc_method
 
 
 logger = logging.getLogger(__name__)
@@ -78,24 +71,35 @@ class Worker(Service):
         contest_id (int): the id of the contest
 
         """
-        # In order to avoid a long-living connection, first fetch the
-        # complete list of files and then download the files; since
-        # this is just pre-caching, possible race conditions are not
-        # dangerous
-        logger.info("Precaching files for contest %d.", contest_id)
-        with SessionGen() as session:
-            contest = Contest.get_from_id(contest_id, session)
-            files = enumerate_files(session, contest, skip_submissions=True,
-                                    skip_user_tests=True, skip_print_jobs=True)
-        for digest in files:
-            try:
-                self.file_cacher.load(digest, if_needed=True)
-            except KeyError:
-                # No problem (at this stage) if we cannot find the
-                # file
-                pass
+        lock = self.file_cacher.precache_lock()
+        if lock is None:
+            # Another worker is already precaching. Hence, this worker doesn't
+            # need to do anything.
+            logger.info("Another worker is already precaching files for "
+                        "contest %d.", contest_id)
+            return
+        with lock:
+            # In order to avoid a long-living connection, first fetch the
+            # complete list of files and then download the files; since
+            # this is just pre-caching, possible race conditions are not
+            # dangerous
+            logger.info("Precaching files for contest %d.", contest_id)
+            with SessionGen() as session:
+                contest = Contest.get_from_id(contest_id, session)
+                files = enumerate_files(session,
+                                        contest,
+                                        skip_submissions=True,
+                                        skip_user_tests=True,
+                                        skip_print_jobs=True)
+            for digest in files:
+                try:
+                    self.file_cacher.cache_file(digest)
+                except KeyError:
+                    # No problem (at this stage) if we cannot find the
+                    # file
+                    pass
 
-        logger.info("Precaching finished.")
+            logger.info("Precaching finished.")
 
     @rpc_method
     def execute_job_group(self, job_group_dict):

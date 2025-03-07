@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -31,16 +30,7 @@ the current ranking.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, itervalues, iteritems
-
 import logging
-
 from collections import defaultdict
 from datetime import timedelta
 from functools import wraps
@@ -50,12 +40,12 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from cms import ServiceCoord, get_service_shards
-from cms.io import Executor, TriggeredService, rpc_method
+from cmscommon.datetime import make_timestamp
 from cms.db import SessionGen, Digest, Dataset, Evaluation, Submission, \
     SubmissionResult, Testcase, UserTest, UserTestResult, get_submissions, \
     get_submission_results, get_datasets_to_judge
 from cms.grading.Job import JobGroup
-
+from cms.io import Executor, TriggeredService, rpc_method
 from .esoperations import ESOperation, get_relevant_operations, \
     get_submissions_operations, get_user_tests_operations, \
     submission_get_operations, submission_to_evaluate, \
@@ -78,7 +68,7 @@ class EvaluationExecutor(Executor):
         The executor just delegates work to the worker pool.
 
         """
-        super(EvaluationExecutor, self).__init__(True)
+        super().__init__(True)
 
         self.evaluation_service = evaluation_service
         self.pool = WorkerPool(self.evaluation_service)
@@ -89,6 +79,13 @@ class EvaluationExecutor(Executor):
 
         # Lock used to guard the currently executing operations
         self._current_execution_lock = gevent.lock.RLock()
+
+        # As evaluate operations are split by testcases, there are too
+        # many entries in the queue to display, so we just take only one
+        # operation of each (type, object_id, dataset_id, priority) tuple.
+        # This dictionary maps any such tuple to a "queue entry" (lacking
+        # the testcase codename) and keeps track of multiplicity.
+        self.queue_status_cumulative = dict()
 
         for i in range(get_service_shards("Worker")):
             worker = ServiceCoord("Worker", i)
@@ -104,9 +101,9 @@ class EvaluationExecutor(Executor):
             or if it is being executed by a worker.
 
         """
-        return super(EvaluationExecutor, self).__contains__(item) or \
-            item in self._currently_executing or \
-            item in self.pool
+        return (super().__contains__(item)
+                or item in self._currently_executing
+                or item in self.pool)
 
     def max_operations_per_batch(self):
         """Return the maximum number of operations per batch.
@@ -153,6 +150,21 @@ class EvaluationExecutor(Executor):
                     self._currently_executing = []
                     break
 
+    def enqueue(self, item, priority, timestamp):
+        success = super().enqueue(item, priority, timestamp)
+        if success:
+            # Add the item to the cumulative status dictionary.
+            key = item.short_key() + (priority,)
+            if key in self.queue_status_cumulative:
+                self.queue_status_cumulative[key]["item"]["multiplicity"] += 1
+            else:
+                item_entry = item.to_dict()
+                del item_entry["testcase_codename"]
+                item_entry["multiplicity"] = 1
+                entry = {"item": item_entry, "priority": priority, "timestamp": make_timestamp(timestamp)}
+                self.queue_status_cumulative[key] = entry
+        return success
+
     def dequeue(self, operation):
         """Remove an item from the queue.
 
@@ -163,7 +175,8 @@ class EvaluationExecutor(Executor):
 
         """
         try:
-            super(EvaluationExecutor, self).dequeue(operation)
+            queue_entry = super().dequeue(operation)
+            self._remove_from_cumulative_status(queue_entry)
         except KeyError:
             with self._current_execution_lock:
                 for i in range(len(self._currently_executing)):
@@ -171,6 +184,18 @@ class EvaluationExecutor(Executor):
                         del self._currently_executing[i]
                         return
             raise
+
+    def _pop(self, wait=False):
+        queue_entry = super()._pop(wait=wait)
+        self._remove_from_cumulative_status(queue_entry)
+        return queue_entry
+
+    def _remove_from_cumulative_status(self, queue_entry):
+        # Remove the item from the cumulative status dictionary.
+        key = queue_entry.item.short_key() + (queue_entry.priority,)
+        self.queue_status_cumulative[key]["item"]["multiplicity"] -= 1
+        if self.queue_status_cumulative[key]["item"]["multiplicity"] == 0:
+            del self.queue_status_cumulative[key]
 
 
 def with_post_finish_lock(func):
@@ -187,7 +212,7 @@ def with_post_finish_lock(func):
     return wrapped
 
 
-class Result(object):
+class Result:
     """An object grouping the results obtained from a worker for an
     operation.
 
@@ -224,7 +249,7 @@ class EvaluationService(TriggeredService):
     MAX_FLUSHING_TIME_SECONDS = 2
 
     def __init__(self, shard, contest_id=None):
-        super(EvaluationService, self).__init__(shard)
+        super().__init__(shard)
 
         self.contest_id = contest_id
 
@@ -398,8 +423,7 @@ class EvaluationService(TriggeredService):
             return False
 
         # enqueue() returns the number of successful pushes.
-        return super(EvaluationService, self).enqueue(
-            operation, priority, timestamp) > 0
+        return super().enqueue(operation, priority, timestamp) > 0
 
     @with_post_finish_lock
     def action_finished(self, data, shard, error=None):
@@ -477,7 +501,7 @@ class EvaluationService(TriggeredService):
             by_object_and_type[t].append((operation, result))
 
         with SessionGen() as session:
-            for key, operation_results in iteritems(by_object_and_type):
+            for key, operation_results in by_object_and_type.items():
                 type_, object_id, dataset_id = key
 
                 dataset = Dataset.get_from_id(dataset_id, session)
@@ -509,7 +533,7 @@ class EvaluationService(TriggeredService):
             session.commit()
 
             num_testcases_per_dataset = dict()
-            for type_, object_id, dataset_id in iterkeys(by_object_and_type):
+            for type_, object_id, dataset_id in by_object_and_type.keys():
                 if type_ == ESOperation.EVALUATION:
                     if dataset_id not in num_testcases_per_dataset:
                         num_testcases_per_dataset[dataset_id] = session\
@@ -529,7 +553,7 @@ class EvaluationService(TriggeredService):
 
             logger.info("Ending operations for %s objects...",
                         len(by_object_and_type))
-            for type_, object_id, dataset_id in iterkeys(by_object_and_type):
+            for type_, object_id, dataset_id in by_object_and_type.keys():
                 if type_ == ESOperation.COMPILATION:
                     submission_result = SubmissionResult.get_from_id(
                         (object_id, dataset_id), session)
@@ -605,7 +629,7 @@ class EvaluationService(TriggeredService):
                    result.job.plus.get("tombstone") is True:
                     executable_digests = [
                         e.digest for e in
-                        itervalues(object_result.executables)]
+                        object_result.executables.values()]
                     if Digest.TOMBSTONE in executable_digests:
                         logger.info("Submission %d's compilation on dataset "
                                     "%d has been invalidated since the "
@@ -1001,12 +1025,10 @@ class EvaluationService(TriggeredService):
         the first queue.
 
         As evaluate operations are split by testcases, there are too
-        many entries in the queue to display, so we just take only one
-        operation of each (type, object_id, dataset_id)
-        tuple. Generally, we will see only one evaluate operation for
-        each submission in the queue status with the number of
-        testcase which will be evaluated next. Moreover, we pass also
-        the number of testcases in the queue.
+        many entries in the queue to display, so we collect entries with the
+        same (type, object_id, dataset_id, priority) tuple.
+        Generally, we will see only one evaluate operation for each submission
+        in the queue status.
 
         The entries are then ordered by priority and timestamp (the
         same criteria used to look at what to complete next).
@@ -1014,17 +1036,6 @@ class EvaluationService(TriggeredService):
         return ([QueueEntry]): the list with the queued elements.
 
         """
-        entries = super(EvaluationService, self).queue_status()[0]
-        entries_by_key = dict()
-        for entry in entries:
-            key = (str(entry["item"]["type"]),
-                   str(entry["item"]["object_id"]),
-                   str(entry["item"]["dataset_id"]))
-            if key in entries_by_key:
-                entries_by_key[key]["item"]["multiplicity"] += 1
-            else:
-                entries_by_key[key] = entry
-                entries_by_key[key]["item"]["multiplicity"] = 1
         return sorted(
-            itervalues(entries_by_key),
+            self.get_executor().queue_status_cumulative.values(),
             key=lambda x: (x["priority"], x["timestamp"]))

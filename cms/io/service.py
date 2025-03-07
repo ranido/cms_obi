@@ -1,11 +1,11 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2019 Edoardo Morassutto <edoardo.morassutto@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,14 +25,6 @@ using gevent and JSON encoding.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import itervalues
-
 import errno
 import functools
 import logging
@@ -43,17 +35,15 @@ import socket
 import time
 
 import gevent
-import gevent.socket
 import gevent.event
-from gevent.server import StreamServer
+import gevent.socket
 from gevent.backdoor import BackdoorServer
+from gevent.server import StreamServer
 
 from cms import ConfigError, config, mkdir, ServiceCoord, Address, \
     get_service_address
 from cms.log import root_logger, shell_handler, ServiceFilter, \
     DetailedFormatter, LogServiceHandler, FileHandler
-from cmscommon.datetime import monotonic_time
-
 from .rpc import rpc_method, RemoteServiceServer, RemoteServiceClient, \
     FakeRemoteServiceClient
 
@@ -74,20 +64,21 @@ def repeater(func, period):
 
     """
     while True:
-        call = monotonic_time()
+        call = time.monotonic()
 
         try:
             func()
         except Exception:
             logger.error("Unexpected error.", exc_info=True)
 
-        gevent.sleep(max(call + period - monotonic_time(), 0))
+        gevent.sleep(max(call + period - time.monotonic(), 0))
 
 
-class Service(object):
+class Service:
 
     def __init__(self, shard=0):
         signal.signal(signal.SIGINT, lambda unused_x, unused_y: self.exit())
+        signal.signal(signal.SIGTERM, lambda unused_x, unused_y: self.exit())
 
         self.name = self.__class__.__name__
         self.shard = shard
@@ -167,13 +158,7 @@ class Service(object):
         connection.
 
         """
-        try:
-            ipaddr, port = address
-            ipaddr = gevent.socket.gethostbyname(ipaddr)
-            address = Address(ipaddr, port)
-        except socket.error:
-            logger.warning("Unexpected error.", exc_info=True)
-            return
+        address = Address(address[0], address[1])
         remote_service = RemoteServiceServer(self, address)
         remote_service.handle(sock)
 
@@ -263,9 +248,8 @@ class Service(object):
         backdoor_path = self.get_backdoor_path()
         try:
             os.remove(backdoor_path)
-        except OSError as error:
-            if error.errno != errno.ENOENT:
-                raise
+        except FileNotFoundError:
+            pass
         else:
             logger.warning("A backdoor socket has been found and deleted.")
         mkdir(os.path.dirname(backdoor_path))
@@ -292,9 +276,8 @@ class Service(object):
         backdoor_path = self.get_backdoor_path()
         try:
             os.remove(backdoor_path)
-        except OSError as error:
-            if error.errno != errno.ENOENT:
-                raise
+        except FileNotFoundError:
+            pass
 
     def run(self):
         """Starts the main loop of the service.
@@ -305,15 +288,14 @@ class Service(object):
         try:
             self.rpc_server.start()
 
-        # This must come before socket.error, because socket.gaierror
-        # extends socket.error
+        # This extends OSError and thus must come before it.
         except socket.gaierror:
             logger.critical("Service %s could not listen on "
                             "specified address, because it cannot "
                             "be resolved.", self.name)
             return False
 
-        except socket.error as error:
+        except OSError as error:
             if error.errno == errno.EADDRINUSE:
                 logger.critical("Listening port %s for service %s is "
                                 "already in use, quitting.",
@@ -347,7 +329,7 @@ class Service(object):
         """Disconnect all remote services.
 
         """
-        for service in itervalues(self.remote_services):
+        for service in self.remote_services.values():
             if service.connected:
                 service.disconnect()
 

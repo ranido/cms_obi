@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -21,13 +20,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import unittest
 from datetime import timedelta
 
@@ -44,9 +36,10 @@ class TaskScoreMixin(DatabaseMixin):
     """A mixin to test the task_score() function with various score modes."""
 
     def setUp(self):
-        super(TaskScoreMixin, self).setUp()
+        super().setUp()
         self.participation = self.add_participation()
-        self.task = self.add_task(contest=self.participation.contest)
+        self.task = self.add_task(contest=self.participation.contest,
+                                  score_precision=2)
         dataset = self.add_dataset(task=self.task)
         self.task.active_dataset = dataset
         self.timestamp = make_datetime()
@@ -54,9 +47,10 @@ class TaskScoreMixin(DatabaseMixin):
     def at(self, timestamp):
         return self.timestamp + timedelta(seconds=timestamp)
 
-    def call(self, public=False, only_tokened=False):
+    def call(self, public=False, only_tokened=False, rounded=False):
         return task_score(self.participation, self.task,
-                          public=public, only_tokened=only_tokened)
+                          public=public, only_tokened=only_tokened,
+                          rounded=rounded)
 
     def add_result(self, timestamp, score, tokened=False, score_details=None,
                    public_score=None, public_score_details=None):
@@ -84,7 +78,7 @@ class TestTaskScoreMaxTokenedLast(TaskScoreMixin, unittest.TestCase):
     """Tests for task_score() using the max_tokened_last score mode."""
 
     def setUp(self):
-        super(TestTaskScoreMaxTokenedLast, self).setUp()
+        super().setUp()
         self.task.score_mode = SCORE_MODE_MAX_TOKENED_LAST
 
     def test_no_submissions(self):
@@ -173,7 +167,7 @@ class TestTaskScoreMaxSubtask(TaskScoreMixin, unittest.TestCase):
     """Tests for task_score() using the max_subtask score mode."""
 
     def setUp(self):
-        super(TestTaskScoreMaxSubtask, self).setUp()
+        super().setUp()
         self.task.score_mode = SCORE_MODE_MAX_SUBTASK
 
     @staticmethod
@@ -253,18 +247,18 @@ class TestTaskScoreMaxSubtask(TaskScoreMixin, unittest.TestCase):
 
     def test_rounding(self):
         # No rounding should happen at the subtask or task level.
-        self.add_result(self.at(1), 80 + 0.0002,
+        self.add_result(self.at(1), 80 + 0.000_2,
                         score_details=[
                             self.subtask(1, 80, 1.0),
-                            self.subtask(2, 20, 0.00001),
+                            self.subtask(2, 20, 0.000_01),
                         ])
-        self.add_result(self.at(2), 0.0004,
+        self.add_result(self.at(2), 0.000_4,
                         score_details=[
                             self.subtask(1, 80, 0.0),
-                            self.subtask(2, 20, 0.00002),
+                            self.subtask(2, 20, 0.000_02),
                         ])
         self.session.flush()
-        self.assertEqual(self.call(), (80 + 0.0004, False))
+        self.assertEqual(self.call(), (80 + 0.000_4, False))
 
     def test_public(self):
         self.add_result(self.at(1),
@@ -325,7 +319,7 @@ class TestTaskScoreMax(TaskScoreMixin, unittest.TestCase):
     """Tests for task_score() using the max score mode."""
 
     def setUp(self):
-        super(TestTaskScoreMax, self).setUp()
+        super().setUp()
         self.task.score_mode = SCORE_MODE_MAX
 
     def test_no_submissions(self):
@@ -374,6 +368,18 @@ class TestTaskScoreMax(TaskScoreMixin, unittest.TestCase):
         self.add_result(self.at(2), 66.6, tokened=False)
         self.session.flush()
         self.assertEqual(self.call(only_tokened=True), (44.4, False))
+
+    def test_unrounded(self):
+        self.add_result(self.at(1), 44.44444, tokened=False)
+        self.add_result(self.at(2), 44.44443, tokened=False)
+        self.session.flush()
+        self.assertEqual(self.call(), (44.44444, False))
+
+    def test_rounded(self):
+        self.add_result(self.at(1), 44.44444, tokened=False)
+        self.add_result(self.at(2), 44.44443, tokened=False)
+        self.session.flush()
+        self.assertEqual(self.call(rounded=True), (44.44, False))
 
 
 if __name__ == "__main__":

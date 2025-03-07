@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,16 +18,8 @@
 
 """Tests for the Batch task type."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import unittest
-
-from mock import MagicMock, call, ANY
+from unittest.mock import MagicMock, call, ANY
 
 from cms.db import File, Manager, Executable
 from cms.grading.Job import CompilationJob, EvaluationJob
@@ -37,6 +28,7 @@ from cmstestsuite.unit_tests.grading.tasktypes.tasktypetestutils import \
     COMPILATION_COMMAND_1, COMPILATION_COMMAND_2, EVALUATION_COMMAND_1, \
     LANG_1, LANG_2, OUTCOME, STATS_OK, STATS_RE, TEXT, \
     TaskTypeTestMixin, fake_compilation_commands, fake_evaluation_commands
+
 
 FILE_FOO_L1 = File(digest="digest of foo.l1", filename="foo.%l")
 FILE_BAR_L1 = File(digest="digest of bar.l1", filename="bar.%l")
@@ -50,7 +42,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
     """Tests for get_compilation_commands()."""
 
     def setUp(self):
-        super(TestGetCompilationCommands, self).setUp()
+        super().setUp()
         self.setUpMocks("Batch")
         self.languages.update({LANG_1, LANG_2})
 
@@ -61,7 +53,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
             "L1": fake_compilation_commands(
                 COMPILATION_COMMAND_1, ["foo.l1"], "foo"),
             "L2": fake_compilation_commands(
-                COMPILATION_COMMAND_2, ["foo.l2"], "foo"),
+                COMPILATION_COMMAND_2, ["foo.l2"], "foo.ext"),
         })
 
     def test_grader(self):
@@ -71,7 +63,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
             "L1": fake_compilation_commands(
                 COMPILATION_COMMAND_1, ["foo.l1", "grader.l1"], "foo"),
             "L2": fake_compilation_commands(
-                COMPILATION_COMMAND_2, ["foo.l2", "grader.l2"], "foo"),
+                COMPILATION_COMMAND_2, ["foo.l2", "grader.l2"], "foo.ext"),
         })
 
     def test_alone_two_files(self):
@@ -81,7 +73,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
             "L1": fake_compilation_commands(
                 COMPILATION_COMMAND_1, ["foo.l1", "bar.l1"], "bar_foo"),
             "L2": fake_compilation_commands(
-                COMPILATION_COMMAND_2, ["foo.l2", "bar.l2"], "bar_foo"),
+                COMPILATION_COMMAND_2, ["foo.l2", "bar.l2"], "bar_foo.ext"),
         })
 
     def test_grader_two_files(self):
@@ -95,7 +87,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
             "L2": fake_compilation_commands(
                 COMPILATION_COMMAND_2,
                 ["foo.l2", "bar.l2", "grader.l2"],
-                "bar_foo"),
+                "bar_foo.ext"),
         })
 
 
@@ -111,7 +103,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
     """
 
     def setUp(self):
-        super(TestCompile, self).setUp()
+        super().setUp()
         self.setUpMocks("Batch")
         self.languages.update({LANG_1})
         self.file_cacher = MagicMock()
@@ -294,7 +286,7 @@ class TestEvaluate(TaskTypeTestMixin, unittest.TestCase):
     """
 
     def setUp(self):
-        super(TestEvaluate, self).setUp()
+        super().setUp()
         self.setUpMocks("Batch")
         self.languages.update({LANG_1})
         self.file_cacher = MagicMock()
@@ -305,7 +297,7 @@ class TestEvaluate(TaskTypeTestMixin, unittest.TestCase):
                              input="digest of input",
                              output="digest of correct output",
                              time_limit=2.5,
-                             memory_limit=123,
+                             memory_limit=123 * 1024 * 1024,
                              executables=executables,
                              multithreaded_sandbox=True)
 
@@ -362,7 +354,7 @@ class TestEvaluate(TaskTypeTestMixin, unittest.TestCase):
         self.evaluation_step.assert_called_once_with(
             sandbox,
             fake_evaluation_commands(EVALUATION_COMMAND_1, "foo", "foo"),
-            2.5, 123,
+            2.5, 123 * 1024 * 1024,
             writable_files=[],
             stdin_redirect="input.txt",
             stdout_redirect="output.txt",
@@ -483,7 +475,7 @@ class TestEvaluate(TaskTypeTestMixin, unittest.TestCase):
         self.evaluation_step.assert_called_once_with(
             sandbox,
             fake_evaluation_commands(EVALUATION_COMMAND_1, "foo", "foo"),
-            2.5, 123,
+            2.5, 123 * 1024 * 1024,
             writable_files=["myout"],
             stdin_redirect=None,
             stdout_redirect=None,

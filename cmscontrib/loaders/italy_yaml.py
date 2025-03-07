@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -7,7 +6,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014-2018 William Di Luigi <williamdiluigi@gmail.com>
-# Copyright © 2015 Luca Chiodini <luca@chiodini.org>
+# Copyright © 2015-2019 Luca Chiodini <luca@chiodini.org>
 # Copyright © 2016 Andrea Cracco <guilucand@gmail.com>
 # Copyright © 2018 Edoardo Morassutto <edoardo.morassutto@gmail.com>
 #
@@ -24,32 +23,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import io
 import logging
 import os
 import os.path
 import sys
-import yaml
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
+from copy import deepcopy
 
-from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE
+import yaml
+
+from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE, \
+    FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cms.db import Contest, User, Task, Statement, Attachment, Team, Dataset, \
     Manager, Testcase
 from cms.grading.languagemanager import LANGUAGES, HEADER_EXTS
 from cmscommon.constants import \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
 from cmscommon.crypto import build_password
-from cmscommon.datetime import make_datetime
 from cmscontrib import touch
-
-from .base_loader import ContestLoader, TaskLoader, UserLoader, TeamLoader
+from .base_loader import ContestLoader, TaskLoader, UserLoader, TeamLoader, LANGUAGE_MAP
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +59,17 @@ yaml.SafeLoader.add_constructor("tag:yaml.org,2002:str", construct_yaml_str)
 
 def getmtime(fname):
     return os.stat(fname).st_mtime
+
+
+yaml_cache = {}
+
+def load_yaml_from_path(path):
+    if path in yaml_cache:
+        return yaml_cache[path]
+    with open(path, "rt", encoding="utf-8") as f:
+        value = yaml.safe_load(f)
+    yaml_cache[path] = value
+    return deepcopy(value)
 
 
 def load(src, dst, src_name, dst_name=None, conv=lambda i: i):
@@ -121,6 +124,14 @@ def load(src, dst, src_name, dst_name=None, conv=lambda i: i):
         return conv(res)
 
 
+def parse_datetime(val):
+    if isinstance(val, datetime):
+        return val.astimezone(timezone.utc)
+    if isinstance(val, (int, float)):
+        return datetime.fromtimestamp(val, timezone.utc)
+    raise ValueError("Invalid datetime format.")
+
+
 def make_timedelta(t):
     return timedelta(seconds=t)
 
@@ -155,9 +166,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             logger.critical("File missing: \"contest.yaml\"")
             return None
 
-        conf = yaml.safe_load(
-            io.open(os.path.join(self.path, "contest.yaml"),
-                    "rt", encoding="utf-8"))
+        conf = load_yaml_from_path(os.path.join(self.path, "contest.yaml"))
 
         # Here we update the time of the last import
         touch(os.path.join(self.path, ".itime_contest"))
@@ -165,17 +174,27 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         touch(os.path.join(self.path, ".import_error_contest"))
 
         args = {}
-        # ranido-begin
-        args["allowed_localizations"] = ["pt-BR",]
-        #args["languages"] = ["C++17 / g++", "C17 / gcc", "Pascal / fpc", "Javascript", "Java / JDK", "Python 3 / CPython", ]
-        args["languages"] = ["C++17 / g++", "C17 / gcc", "Javascript", "Java / JDK", "Python 3 / CPython", ]
-        # ranido-end
-
+        
+        # Contest information
         load(conf, args, ["name", "nome_breve"])
         load(conf, args, ["description", "nome"])
+        load(conf, args, "allowed_localizations")
+        load(conf, args, "languages")
+        load(conf, args, "submissions_download_allowed")
+        load(conf, args, "allow_questions")
+        load(conf, args, "allow_user_tests")
+        load(conf, args, "score_precision")
 
         logger.info("Loading parameters for contest %s.", args["name"])
 
+        # Logging in
+        load(conf, args, "block_hidden_participations")
+        load(conf, args, "allow_password_authentication")
+        load(conf, args, "allow_registration")
+        load(conf, args, "ip_restriction")
+        load(conf, args, "ip_autologin")
+
+        # Token parameters
         # Use the new token settings format if detected.
         if "token_mode" in conf:
             load(conf, args, "token_mode")
@@ -217,25 +236,28 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             if args["token_gen_interval"].total_seconds() == 0:
                 args["token_gen_interval"] = timedelta(minutes=1)
 
-        load(conf, args, ["start", "inizio"], conv=make_datetime)
-        load(conf, args, ["stop", "fine"], conv=make_datetime)
+        # Times
+        load(conf, args, ["start", "inizio"], conv=parse_datetime)
+        load(conf, args, ["stop", "fine"], conv=parse_datetime)
+        load(conf, args, ["timezone"])
         load(conf, args, ["per_user_time"], conv=make_timedelta)
 
+        # Limits
         load(conf, args, "max_submission_number")
         load(conf, args, "max_user_test_number")
         load(conf, args, "min_submission_interval", conv=make_timedelta)
         load(conf, args, "min_user_test_interval", conv=make_timedelta)
 
+        # Analysis mode
+        load(conf, args, "analysis_enabled")
+        load(conf, args, "analysis_start", conv=parse_datetime)
+        load(conf, args, "analysis_stop", conv=parse_datetime)
+
         tasks = load(conf, None, ["tasks", "problemi"])
         participations = load(conf, None, ["users", "utenti"])
-        # ranido-begin
-        args_tmp = {}
-        load(conf, args_tmp, "password_method")
-        if "password_method" not in args_tmp:
-            args_tmp['password_method'] = 'plaintext'
+        participations = [] if participations is None else participations
         for p in participations:
-            p["password"] = build_password(p['password'], args_tmp['password_method'])
-        # ranido-end
+            p["password"] = build_password(p["password"])
 
         # Import was successful
         os.remove(os.path.join(self.path, ".import_error_contest"))
@@ -255,9 +277,8 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         username = os.path.basename(self.path)
         logger.info("Loading parameters for user %s.", username)
 
-        conf = yaml.safe_load(
-            io.open(os.path.join(os.path.dirname(self.path), "contest.yaml"),
-                    "rt", encoding="utf-8"))
+        conf = load_yaml_from_path(
+            os.path.join(os.path.dirname(self.path), "contest.yaml"))
 
         args = {}
 
@@ -272,14 +293,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             return None
 
         load(conf, args, "username")
-        # ranido-begin
-        args_tmp = {}
-        load(conf, args_tmp, "password_method")
-        if "password_method" not in args_tmp:
-            args_tmp['password_method'] = 'plaintext'
-        load(conf, args, "password")
-        args['password'] = build_password(args['password'], args_tmp['password_method'])
-        # ranido-end
+        load(conf, args, "password", conv=build_password)
 
         load(conf, args, ["first_name", "nome"])
         load(conf, args, ["last_name", "cognome"])
@@ -304,9 +318,8 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         team_code = os.path.basename(self.path)
         logger.info("Loading parameters for team %s.", team_code)
 
-        conf = yaml.safe_load(
-            io.open(os.path.join(os.path.dirname(self.path), "contest.yaml"),
-                    "rt", encoding="utf-8"))
+        conf = load_yaml_from_path(
+            os.path.join(os.path.dirname(self.path), "contest.yaml"))
 
         args = {}
 
@@ -339,20 +352,17 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         # We first look for the yaml file inside the task folder,
         # and eventually fallback to a yaml file in its parent folder.
         try:
-            conf = yaml.safe_load(
-                io.open(os.path.join(self.path, "task.yaml"),
-                        "rt", encoding="utf-8"))
-        except IOError as err:
+            conf = load_yaml_from_path(os.path.join(self.path, "task.yaml"))
+        except OSError as err:
             try:
                 deprecated_path = os.path.join(self.path, "..", name + ".yaml")
-                conf = yaml.safe_load(io.open(deprecated_path, "rt",
-                                              encoding="utf-8"))
+                conf = load_yaml_from_path(deprecated_path)
 
                 logger.warning("You're using a deprecated location for the "
                                "task.yaml file. You're advised to move %s to "
                                "%s.", deprecated_path,
                                os.path.join(self.path, "task.yaml"))
-            except IOError:
+            except OSError:
                 # Since both task.yaml and the (deprecated) "../taskname.yaml"
                 # are missing, we will only warn the user that task.yaml is
                 # missing (to avoid encouraging the use of the deprecated one)
@@ -382,28 +392,79 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         logger.info("Loading parameters for task %s.", name)
 
         if get_statement:
+            # The language of testo.pdf / statement.pdf, defaulting to 'it'
             primary_language = load(conf, None, "primary_language")
             if primary_language is None:
-                primary_language = 'it'
-            paths = [os.path.join(self.path, "statement", "statement.pdf"),
-                     os.path.join(self.path, "testo", "testo.pdf")]
-            for path in paths:
-                if os.path.exists(path):
-                    digest = self.file_cacher.put_file_from_path(
-                        path,
-                        "Statement for task %s (lang: %s)" %
-                        (name, primary_language))
-                    break
-            else:
-                logger.critical("Couldn't find any task statement, aborting.")
+                primary_language = "it"
+
+            statement = None
+            for localized_statement in ["statement", "testo"]:
+                if os.path.exists(os.path.join(self.path, localized_statement)):
+                    # Ensure that only one folder exists: either testo/ or statement/
+                    if statement is not None:
+                        logger.critical(
+                            "Both testo/ and statement/ are present. This is likely an error."
+                        )
+                        sys.exit(1)
+                    statement = localized_statement
+
+            if statement is None:
+                logger.critical("Statement folder not found.")
                 sys.exit(1)
-            args["statements"] = {
-                primary_language: Statement(primary_language, digest)
-            }
+
+            single_statement_path = os.path.join(
+                self.path, statement, "%s.pdf" % statement)
+            if not os.path.exists(single_statement_path):
+                single_statement_path = None
+
+            multi_statement_paths = {}
+            for lang, lang_code in LANGUAGE_MAP.items():
+                path = os.path.join(self.path, statement, "%s.pdf" % lang)
+                if os.path.exists(path):
+                    multi_statement_paths[lang_code] = path
+
+            if len(multi_statement_paths) > 0:
+                # Ensure that either a statement.pdf or testo.pdf is specified,
+                # or a list of <lang>.pdf files are specified, but not both,
+                # unless statement.pdf or testo.pdf is a symlink, in which case
+                # we let it slide.
+                if single_statement_path is not None and not os.path.islink(
+                    single_statement_path
+                ):
+                    logger.warning(
+                        f"A statement (not a symlink!) is present at {single_statement_path} "
+                        f"but {len(multi_statement_paths)} more multi-language statements "
+                        "were found. This is likely an error. Proceeding with "
+                        "importing the multi-language files only."
+                    )
+                statements_to_import = multi_statement_paths
+            else:
+                statements_to_import = {
+                    primary_language: single_statement_path}
+
+            if primary_language not in statements_to_import.keys():
+                logger.critical(
+                    "Couldn't find statement for primary language %s, aborting." % primary_language)
+                sys.exit(1)
+
+            args["statements"] = dict()
+            for lang_code, statement_path in statements_to_import.items():
+                digest = self.file_cacher.put_file_from_path(
+                    statement_path,
+                    "Statement for task %s (lang: %s)" % (name, lang_code),
+                )
+                args["statements"][lang_code] = Statement(lang_code, digest)
 
             args["primary_statements"] = [primary_language]
 
         args["submission_format"] = ["%s.%%l" % name]
+
+        # Import the feedback level when explicitly set to full
+        # (default behaviour is restricted)
+        if conf.get("feedback_level", None) == FEEDBACK_LEVEL_FULL:
+            args["feedback_level"] = FEEDBACK_LEVEL_FULL
+        elif conf.get("feedback_level", None) == FEEDBACK_LEVEL_RESTRICTED:
+            args["feedback_level"] = FEEDBACK_LEVEL_RESTRICTED
 
         if conf.get("score_mode", None) == SCORE_MODE_MAX:
             args["score_mode"] = SCORE_MODE_MAX
@@ -466,6 +527,9 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                     "Attachment %s for task %s" % (filename, name))
                 args["attachments"][filename] = Attachment(filename, digest)
 
+        # Score precision.
+        load(conf, args, "score_precision")
+
         task = Task(**args)
 
         args = {}
@@ -474,8 +538,10 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         args["autojudge"] = False
 
         load(conf, args, ["time_limit", "timeout"], conv=float)
-        load(conf, args, ["memory_limit", "memlimit"])
-        
+        # The Italian YAML format specifies memory limits in MiB.
+        load(conf, args, ["memory_limit", "memlimit"],
+             conv=lambda mb: mb * 1024 * 1024)
+
         # Builds the parameters that depend on the task type
         args["managers"] = []
         infile_param = conf.get("infile", "input.txt")
@@ -538,7 +604,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         # Detect subtasks by checking GEN
         gen_filename = os.path.join(self.path, 'gen', 'GEN')
         try:
-            with io.open(gen_filename, "rt", encoding="utf-8") as gen_file:
+            with open(gen_filename, "rt", encoding="utf-8") as gen_file:
                 subtasks = []
                 testcases = 0
                 points = None
@@ -577,7 +643,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                         if subtask_detected:
                             # Close the previous subtask
                             if points is None:
-                                assert(testcases == 0)
+                                assert testcases == 0
                             else:
                                 subtasks.append([points, testcases])
                             # Open the new one
@@ -596,7 +662,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                     args["score_type_parameters"] = input_value
                 else:
                     subtasks.append([points, testcases])
-                    assert(100 == sum([int(st[0]) for st in subtasks]))
+                    assert 100 == sum([int(st[0]) for st in subtasks])
                     n_input = sum([int(st[1]) for st in subtasks])
                     args["score_type"] = "GroupMin"
                     args["score_type_parameters"] = subtasks
@@ -605,7 +671,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                     assert int(conf['n_input']) == n_input
 
         # If gen/GEN doesn't exist, just fallback to Sum
-        except IOError:
+        except OSError:
             args["score_type"] = "Sum"
             total_value = float(conf.get("total_value", 100.0))
             input_value = 0.0
@@ -644,10 +710,17 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                     num_processes = load(conf, None, "num_processes")
                     if num_processes is None:
                         num_processes = 1
+                    io_type = load(conf, None, "user_io")
+                    if io_type is not None:
+                        if io_type not in ["std_io", "fifo_io"]:
+                            logger.warning("user_io incorrect. Valid options "
+                                           "are 'std_io' and 'fifo_io'. "
+                                           "Ignored.")
+                            io_type = None
                     logger.info("Task type Communication")
                     args["task_type"] = "Communication"
                     args["task_type_parameters"] = \
-                        [num_processes, "stub", "fifo_io"]
+                        [num_processes, "alone", io_type or "std_io"]
                     digest = self.file_cacher.put_file_from_path(
                         path,
                         "Manager for task %s" % task.name)
@@ -661,6 +734,8 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                                 stub_name,
                                 "Stub for task %s and language %s" % (
                                     task.name, lang.name))
+                            args["task_type_parameters"] = \
+                                [num_processes, "stub", io_type or "fifo_io"]
                             args["managers"] += [
                                 Manager(
                                     "stub%s" % lang.source_extension, digest)]
@@ -773,13 +848,10 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         # We first look for the yaml file inside the task folder,
         # and eventually fallback to a yaml file in its parent folder.
         try:
-            conf = yaml.safe_load(
-                io.open(os.path.join(self.path, "task.yaml"),
-                        "rt", encoding="utf-8"))
-        except IOError:
-            conf = yaml.safe_load(
-                io.open(os.path.join(self.path, "..", name + ".yaml"),
-                        "rt", encoding="utf-8"))
+            conf = load_yaml_from_path(os.path.join(self.path, "task.yaml"))
+        except OSError:
+            conf = load_yaml_from_path(
+                os.path.join(self.path, "..", name + ".yaml"))
 
         # If there is no .itime file, we assume that the task has changed
         if not os.path.exists(os.path.join(self.path, ".itime")):
@@ -807,6 +879,9 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         # Statement
         files.append(os.path.join(self.path, "statement", "statement.pdf"))
         files.append(os.path.join(self.path, "testo", "testo.pdf"))
+        for lang in LANGUAGE_MAP:
+            files.append(os.path.join(self.path, "statement", "%s.pdf" % lang))
+            files.append(os.path.join(self.path, "testo", "%s.pdf" % lang))
 
         # Managers
         files.append(os.path.join(self.path, "check", "checker"))

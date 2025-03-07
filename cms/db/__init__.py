@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -10,6 +9,7 @@
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Masaki Hara <ackie.h.gmai@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2018 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,13 +27,6 @@
 """Utilities functions that interacts with the database.
 
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
 
 import logging
 
@@ -88,7 +81,7 @@ __all__ = [
 
 # Instantiate or import these objects.
 
-version = 39
+version = 44
 
 engine = create_engine(config.database, echo=config.database_debug,
                        pool_timeout=60, pool_recycle=120)

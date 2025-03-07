@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -38,23 +37,15 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
-from werkzeug.wsgi import SharedDataMiddleware
+from werkzeug.middleware.shared_data import SharedDataMiddleware
 
-from cms.server.contest.jinja2_toolbox import CWS_ENVIRONMENT
-from cmscommon.binary import hex_to_bin
 from cms import ConfigError, ServiceCoord, config
 from cms.io import WebService
 from cms.locale import get_translations
-
+from cms.server.contest.jinja2_toolbox import CWS_ENVIRONMENT
+from cmscommon.binary import hex_to_bin
 from .handlers import HANDLERS
 from .handlers.base import ContestListHandler
 from .handlers.main import MainHandler
@@ -101,7 +92,7 @@ class ContestWebServer(WebService):
             HANDLERS.append((r"/", MainHandler))
             handlers = HANDLERS
 
-        super(ContestWebServer, self).__init__(
+        super().__init__(
             listen_port,
             handlers,
             parameters,
@@ -109,7 +100,7 @@ class ContestWebServer(WebService):
             listen_address=listen_address)
 
         self.wsgi_app = SharedDataMiddleware(
-            self.wsgi_app, {"/stl": config.stl_path},
+            self.wsgi_app, {"/docs": config.docs_path or config.stl_path},
             cache=True, cache_timeout=SECONDS_IN_A_YEAR,
             fallback_mimetype="application/octet-stream")
 

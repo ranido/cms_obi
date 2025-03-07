@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -21,27 +20,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, iteritems
-
 import logging
 import os
 import tempfile
 from functools import reduce
 
 from cms import config, rmtree
+from cms.db import Executable
+from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
 from cms.grading.Sandbox import wait_without_std, Sandbox
-from cms.grading.steps import compilation_step,  evaluation_step_before_run, \
+from cms.grading.languagemanager import LANGUAGES, get_language
+from cms.grading.steps import compilation_step, evaluation_step_before_run, \
     evaluation_step_after_run, extract_outcome_and_text, \
     human_evaluation_message, merge_execution_stats, trusted_step
-from cms.grading.languagemanager import LANGUAGES, get_language
-from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
-from cms.db import Executable
 from cms.grading.tasktypes import check_files_number
 from . import TaskType, check_executables_number, check_manager_present, \
     create_sandbox, delete_sandbox, is_manager_for_compilation
@@ -131,7 +122,7 @@ class Communication(TaskType):
         return "Communication"
 
     def __init__(self, parameters):
-        super(Communication, self).__init__(parameters)
+        super().__init__(parameters)
 
         self.num_processes = self.parameters[0]
         self.compilation = self.parameters[1]
@@ -143,10 +134,11 @@ class Communication(TaskType):
         if self._uses_stub():
             codenames_to_compile.append(self.STUB_BASENAME + ".%l")
         codenames_to_compile.extend(submission_format)
-        executable_filename = self._executable_filename(submission_format)
         res = dict()
         for language in LANGUAGES:
             source_ext = language.source_extension
+            executable_filename = self._executable_filename(submission_format,
+                                                            language)
             res[language.name] = language.get_compilation_commands(
                 [codename.replace(".%l", source_ext)
                  for codename in codenames_to_compile],
@@ -171,17 +163,19 @@ class Communication(TaskType):
         return self.io == self.USER_IO_FIFOS
 
     @staticmethod
-    def _executable_filename(codenames):
+    def _executable_filename(codenames, language):
         """Return the chosen executable name computed from the codenames.
 
         codenames ([str]): submission format or codename of submitted files,
             may contain %l.
+        language (Language): the programming language of the submission.
 
         return (str): a deterministic executable name.
 
         """
-        return "_".join(sorted(codename.replace(".%l", "")
+        name = "_".join(sorted(codename.replace(".%l", "")
                                for codename in codenames))
+        return name + language.executable_extension
 
     def compile(self, job, file_cacher):
         """See TaskType.compile."""
@@ -204,17 +198,18 @@ class Communication(TaskType):
             filenames_and_digests_to_get[stub_filename] = \
                 job.managers[stub_filename].digest
         # User's submitted file(s) (copy and add to compilation).
-        for codename, file_ in iteritems(job.files):
+        for codename, file_ in job.files.items():
             filename = codename.replace(".%l", source_ext)
             filenames_to_compile.append(filename)
             filenames_and_digests_to_get[filename] = file_.digest
         # Any other useful manager (just copy).
-        for filename, manager in iteritems(job.managers):
+        for filename, manager in job.managers.items():
             if is_manager_for_compilation(filename, language):
                 filenames_and_digests_to_get[filename] = manager.digest
 
         # Prepare the compilation command
-        executable_filename = self._executable_filename(iterkeys(job.files))
+        executable_filename = self._executable_filename(job.files.keys(),
+                                                        language)
         commands = language.get_compilation_commands(
             filenames_to_compile, executable_filename)
 
@@ -223,7 +218,7 @@ class Communication(TaskType):
         job.sandboxes.append(sandbox.get_root_path())
 
         # Copy all required files in the sandbox.
-        for filename, digest in iteritems(filenames_and_digests_to_get):
+        for filename, digest in filenames_and_digests_to_get.items():
             sandbox.create_file_from_storage(filename, digest)
 
         # Run the compilation.
@@ -249,7 +244,7 @@ class Communication(TaskType):
         """See TaskType.evaluate."""
         if not check_executables_number(job, 1):
             return
-        executable_filename = next(iterkeys(job.executables))
+        executable_filename = next(iter(job.executables.keys()))
         executable_digest = job.executables[executable_filename].digest
 
         # Make sure the required manager is among the job managers.
@@ -322,7 +317,7 @@ class Communication(TaskType):
             sandbox_mgr,
             manager_command,
             manager_time_limit,
-            config.trusted_sandbox_max_memory_kib // 1024,
+            config.trusted_sandbox_max_memory_kib * 1024,
             dirs_map=dict((fifo_dir[i], (sandbox_fifo_dir[i], "rw"))
                           for i in indices),
             writable_files=[self.OUTPUT_FILENAME],
@@ -331,7 +326,8 @@ class Communication(TaskType):
 
         # Start the user submissions compiled with the stub.
         language = get_language(job.language)
-        main = self.STUB_BASENAME if self._uses_stub() else executable_filename
+        main = self.STUB_BASENAME if self._uses_stub() \
+               else os.path.splitext(executable_filename)[0]
         processes = [None for i in indices]
         for i in indices:
             args = []

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -28,21 +27,23 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
-import tornado.web
+import collections
+try:
+    collections.MutableMapping
+except:
+    # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
+    collections.MutableMapping = collections.abc.MutableMapping
+
+try:
+    import tornado4.web as tornado_web
+except ImportError:
+    import tornado.web as tornado_web
 
 from cms.server import multi_contest
 from cms.server.contest.communication import accept_question, \
     UnacceptableQuestion, QuestionsNotAllowed
-
 from .contest import ContestHandler
 
 
@@ -59,7 +60,7 @@ class CommunicationHandler(ContestHandler):
     and the contest managers..
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @multi_contest
     def get(self):
         self.render("communication.html", **self.r_params)
@@ -69,7 +70,7 @@ class QuestionHandler(ContestHandler):
     """Called when the user submits a question.
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @multi_contest
     def post(self):
         try:
@@ -78,9 +79,9 @@ class QuestionHandler(ContestHandler):
                             self.get_argument("question_text", ""))
             self.sql_session.commit()
         except QuestionsNotAllowed:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
         except UnacceptableQuestion as e:
-            self.notify_error(e.subject, e.text)
+            self.notify_error(e.subject, e.text, e.text_params)
         else:
             self.notify_success(N_("Question received"),
                                 N_("Your question has been received, you "

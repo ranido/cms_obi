@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -20,22 +19,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
+from .admin import \
+    AddAdminHandler, \
+    AdminsHandler, \
+    AdminHandler
 from .base import \
     FileFromDigestHandler, \
     SimpleHandler, \
     SimpleContestHandler
-from .main import \
-    LoginHandler, \
-    LogoutHandler, \
-    ResourcesHandler, \
-    NotificationsHandler
 from .contest import \
     AddContestHandler, \
     ContestHandler, \
@@ -43,18 +34,6 @@ from .contest import \
     ResourcesListHandler, \
     ContestListHandler, \
     RemoveContestHandler
-from .contestuser import \
-    ContestUsersHandler, \
-    RemoveParticipationHandler, \
-    AddContestUserHandler, \
-    ParticipationHandler, \
-    MessageHandler
-from .contesttask import \
-    ContestTasksHandler, \
-    AddContestTaskHandler
-from .contestsubmission import \
-    ContestSubmissionsHandler, \
-    ContestUserTestsHandler
 from .contestannouncement import \
     AddAnnouncementHandler, \
     AnnouncementHandler
@@ -65,16 +44,18 @@ from .contestquestion import \
     QuestionClaimHandler
 from .contestranking import \
     RankingHandler
-from .task import \
-    AddTaskHandler, \
-    TaskHandler, \
-    AddDatasetHandler, \
-    AddStatementHandler, \
-    StatementHandler, \
-    AddAttachmentHandler, \
-    AttachmentHandler, \
-    TaskListHandler, \
-    RemoveTaskHandler
+from .contestsubmission import \
+    ContestSubmissionsHandler, \
+    ContestUserTestsHandler
+from .contesttask import \
+    ContestTasksHandler, \
+    AddContestTaskHandler
+from .contestuser import \
+    ContestUsersHandler, \
+    RemoveParticipationHandler, \
+    AddContestUserHandler, \
+    ParticipationHandler, \
+    MessageHandler
 from .dataset import \
     DatasetSubmissionsHandler, \
     CloneDatasetHandler, \
@@ -88,6 +69,26 @@ from .dataset import \
     AddTestcasesHandler, \
     DeleteTestcaseHandler, \
     DownloadTestcasesHandler
+from .main import \
+    LoginHandler, \
+    LogoutHandler, \
+    ResourcesHandler, \
+    NotificationsHandler
+from .submission import \
+    SubmissionHandler, \
+    SubmissionCommentHandler, \
+    SubmissionOfficialStatusHandler, \
+    SubmissionFileHandler
+from .task import \
+    AddTaskHandler, \
+    TaskHandler, \
+    AddDatasetHandler, \
+    AddStatementHandler, \
+    StatementHandler, \
+    AddAttachmentHandler, \
+    AttachmentHandler, \
+    TaskListHandler, \
+    RemoveTaskHandler
 from .user import \
     AddUserHandler, \
     UserHandler, \
@@ -97,15 +98,6 @@ from .user import \
     EditParticipationHandler, \
     AddTeamHandler, \
     TeamHandler
-from .admin import \
-    AddAdminHandler, \
-    AdminsHandler, \
-    AdminHandler
-from .submission import \
-    SubmissionHandler, \
-    SubmissionCommentHandler, \
-    SubmissionOfficialStatusHandler, \
-    SubmissionFileHandler
 from .usertest import \
     UserTestHandler, \
     UserTestFileHandler

@@ -1,8 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2020 Andrey Vihrov <andrey.vihrov@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,14 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""C++ programming language definition."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
+"""C++17 programming language definition."""
 
 from cms.grading import CompiledLanguage
 
@@ -50,12 +43,12 @@ class Cpp17Gpp(CompiledLanguage):
 
     @property
     def header_extensions(self):
-        """See Language.source_extensions."""
+        """See Language.header_extensions."""
         return [".h"]
 
     @property
     def object_extensions(self):
-        """See Language.source_extensions."""
+        """See Language.object_extensions."""
         return [".o"]
 
     def get_compilation_commands(self,

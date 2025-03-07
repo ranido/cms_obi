@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,28 +18,17 @@
 
 """Tests for the DumpImporter script"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import PY3, assertCountEqual, iteritems
-
 import json
-import io
 import os
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
-from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
 
-from cms.db import Contest, FSObject, Session, version
-
+from cms.db import Contest, User, FSObject, Session, version
 from cmscommon.digest import bytes_digest
-
 from cmscontrib.DumpImporter import DumpImporter
+from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
 
 
 class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
@@ -62,6 +50,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             "name": "contestname",
             "description": "contest description 你好",
             "tasks": ["task_key"],
+            "participations": ["part_key"],
         },
         "task_key": {
             "_class": "Task",
@@ -69,6 +58,8 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             "title": "task title",
             "num": 0,
             "contest": "contest_key",
+            "submission_format": ["source"],
+            "attachments": {},
             "datasets": ["dataset_key"],
             "active_dataset": "dataset_key",
             "submissions": ["sub_key"],
@@ -80,9 +71,10 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             "score_type": "Sum",
             "score_type_parameters": "[]",
             "time_limit": 1.0,
-            "memory_limit": 512,
+            "memory_limit": 512 * 1024 * 1024,
             "description": "dataset description",
             "task": "task_key",
+            "managers": {},
         },
         "user_key": {
             "_class": "User",
@@ -90,6 +82,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             "first_name": "First Name",
             "last_name": "Last Name",
             "password": "pwd",
+            "participations": ["part_key"],
         },
         "part_key": {
             "_class": "Participation",
@@ -99,9 +92,11 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         },
         "sub_key": {
             "_class": "Submission",
-            "timestamp": 1234567890.123,
+            "timestamp": 1_234_567_890.123,
             "participation": "part_key",
             "task": "task_key",
+            "files": {"source": "file_key"},
+            "results": ["sr_key"],
         },
         "file_key": {
             "_class": "File",
@@ -127,7 +122,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
     }
 
     def setUp(self):
-        super(TestDumpImporter, self).setUp()
+        super().setUp()
 
         # Another contest, to make sure it's not wiped on import.
         self.other_contest = self.add_contest()
@@ -138,10 +133,11 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
 
     def tearDown(self):
         self.delete_data()
-        super(TestDumpImporter, self).tearDown()
+        super().tearDown()
 
     def do_import(self, drop=False, load_files=True,
-                  skip_generated=False, skip_submissions=False):
+                  skip_generated=False, skip_submissions=False,
+                  skip_users=False):
         """Create an importer and call do_import in a convenient way"""
         return DumpImporter(
             drop,
@@ -151,16 +147,13 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             skip_generated=skip_generated,
             skip_submissions=skip_submissions,
             skip_user_tests=False,
+            skip_users=skip_users,
             skip_print_jobs=False).do_import()
 
     def write_dump(self, dump):
         destination = self.get_path("contest.json")
-        if PY3:
-            with io.open(destination, "wt", encoding="utf-8") as f:
-                json.dump(dump, f, indent=4, sort_keys=True)
-        else:
-            with io.open(destination, "wb") as f:
-                json.dump(dump, f, indent=4, sort_keys=True)
+        with open(destination, "wt", encoding="utf-8") as f:
+            json.dump(dump, f, indent=4, sort_keys=True)
 
     def write_files(self, data):
         """Write files and descriptions on the filesystem.
@@ -171,11 +164,11 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         """
         f_path = self.makedirs("files")
         d_path = self.makedirs("descriptions")
-        for digest, (desc, content) in iteritems(data):
-            with io.open(
+        for digest, (desc, content) in data.items():
+            with open(
                     os.path.join(d_path, digest), "wt", encoding="utf-8") as f:
                 f.write(desc)
-            with io.open(os.path.join(f_path, digest), "wb") as f:
+            with open(os.path.join(f_path, digest), "wb") as f:
                 f.write(content)
 
     def assertContestInDb(self, name, description, task_names_and_titles,
@@ -192,17 +185,23 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         c = db_contests[0]
         self.assertEqual(c.name, name)
         self.assertEqual(c.description, description)
-        assertCountEqual(self, [(t.name, t.title) for t in c.tasks],
-                         task_names_and_titles)
-        assertCountEqual(self, [(u.user.username, u.user.last_name)
+        self.assertCountEqual([(t.name, t.title) for t in c.tasks],
+                              task_names_and_titles)
+        self.assertCountEqual([(u.user.username, u.user.last_name)
                                 for u in c.participations],
-                         usernames_and_last_names)
+                              usernames_and_last_names)
 
     def assertContestNotInDb(self, name):
         """Assert that the contest with the given name is not in the DB."""
         db_contests = self.session.query(Contest)\
             .filter(Contest.name == name).all()
         self.assertEqual(len(db_contests), 0)
+
+    def assertUserNotInDb(self, username):
+        """Assert that the user with the given username is not in the DB."""
+        db_users = self.session.query(User)\
+            .filter(User.username == username).all()
+        self.assertEqual(len(db_users), 0)
 
     def assertFileInDb(self, digest, description, content):
         """Assert that the file with the given data is in the DB."""
@@ -288,6 +287,24 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         self.assertFileNotInDb(TestDumpImporter.GENERATED_FILE_DIGEST)
         self.assertFileNotInDb(TestDumpImporter.NON_GENERATED_FILE_DIGEST)
 
+    def test_import_skip_users(self):
+        """Test importing everything but not the users."""
+        self.write_dump(TestDumpImporter.DUMP)
+        self.write_files(TestDumpImporter.FILES)
+
+        self.assertTrue(self.do_import(skip_users=True))
+
+        self.assertContestInDb("contestname", "contest description 你好",
+                               [("taskname", "task title")],
+                               [])
+        self.assertContestInDb(
+            self.other_contest_name, self.other_contest_description, [], [])
+
+        self.assertUserNotInDb("username")
+        self.assertFileNotInDb(TestDumpImporter.GENERATED_FILE_DIGEST)
+        self.assertFileNotInDb(TestDumpImporter.NON_GENERATED_FILE_DIGEST)
+
+
     def test_import_old(self):
         """Test importing an old dump.
 
@@ -300,8 +317,8 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
                 "_class": "Contest",
                 "name": "contestname",
                 "description": "contest description",
-                "start": 1234567890.000,
-                "stop": 1324567890.000,
+                "start": 1_234_567_890.000,
+                "stop": 1_324_567_890.000,
                 "token_initial": 2,
                 "token_gen_number": 1,
                 "token_gen_time": 10,
@@ -327,6 +344,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
                 "time_limit": 0.0,
                 "memory_limit": None,
                 "contest": "contest_key",
+                "attachments": {},
                 "managers": {},
                 "testcases": {},
                 "submissions": ["sub1_key", "sub2_key"],
@@ -346,21 +364,23 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             },
             "sub1_key": {
                 "_class": "Submission",
-                "timestamp": 1234567890.123,
+                "timestamp": 1_234_567_890.123,
                 "language": "c",
                 "user": "user_key",
                 "task": "task_key",
                 "compilation_text": "OK [1.234 - 20]",
+                "files": {},
                 "executables": {"exe": "exe_key"},
                 "evaluations": [],
             },
             "sub2_key": {
                 "_class": "Submission",
-                "timestamp": 1234567900.123,
+                "timestamp": 1_234_567_900.123,
                 "language": "c",
                 "user": "user_key",
                 "task": "task_key",
                 "compilation_text": "Killed with signal 11 [0.123 - 10]\n",
+                "files": {},
                 "executables": {},
                 "evaluations": [],
             },

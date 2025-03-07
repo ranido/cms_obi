@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -27,22 +26,23 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import itervalues
-
 import logging
 import traceback
 
-import tornado.web
+import collections
+try:
+    collections.MutableMapping
+except:
+    # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
+    collections.MutableMapping = collections.abc.MutableMapping
+
+try:
+    import tornado4.web as tornado_web
+except ImportError:
+    import tornado.web as tornado_web
 
 from cms.db import Attachment, Dataset, Session, Statement, Submission, Task
 from cmscommon.datetime import make_datetime
-
 from .base import BaseHandler, SimpleHandler, require_permission
 
 
@@ -200,7 +200,7 @@ class TaskHandler(BaseHandler):
                 self.redirect(self.url("task", task_id))
                 return
 
-            for testcase in itervalues(dataset.testcases):
+            for testcase in dataset.testcases.values():
                 testcase.public = bool(self.get_argument(
                     "testcase_%s_public" % testcase.id, False))
 
@@ -300,7 +300,7 @@ class StatementHandler(BaseHandler):
 
         # Protect against URLs providing incompatible parameters.
         if task is not statement.task:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         self.sql_session.delete(statement)
         self.try_commit()
@@ -372,7 +372,7 @@ class AttachmentHandler(BaseHandler):
 
         # Protect against URLs providing incompatible parameters.
         if attachment.task is not task:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         self.sql_session.delete(attachment)
         self.try_commit()

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -21,13 +20,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 import unittest
 
@@ -40,7 +32,7 @@ class TestLogService(unittest.TestCase):
     SERVICE_NAME = "RandomService"
     SERVICE_SHARD = 0
     OPERATION = "Random operation"
-    CREATED = 1234567890.123
+    CREATED = 1_234_567_890.123
     EXC_TEXT = "Random exception"
 
     def setUp(self):
@@ -67,21 +59,21 @@ class TestLogService(unittest.TestCase):
             exc_text=TestLogService.EXC_TEXT + severity)
         last_message = self.service.last_messages()[-1]
         if saved:
-            self.assertEquals(last_message["message"],
+            self.assertEqual(last_message["message"],
                               TestLogService.MSG + severity)
-            self.assertEquals(last_message["coord"],
+            self.assertEqual(last_message["coord"],
                               TestLogService.SERVICE_NAME + severity +
                               "," + ("%d" % TestLogService.SERVICE_SHARD))
-            self.assertEquals(last_message["operation"],
+            self.assertEqual(last_message["operation"],
                               TestLogService.OPERATION + severity)
-            self.assertEquals(last_message["severity"],
+            self.assertEqual(last_message["severity"],
                               severity)
-            self.assertEquals(last_message["timestamp"],
+            self.assertEqual(last_message["timestamp"],
                               TestLogService.CREATED)
-            self.assertEquals(last_message["exc_text"],
+            self.assertEqual(last_message["exc_text"],
                               TestLogService.EXC_TEXT + severity)
         else:
-            self.assertNotEquals(last_message["severity"], severity)
+            self.assertNotEqual(last_message["severity"], severity)
 
 
 if __name__ == "__main__":

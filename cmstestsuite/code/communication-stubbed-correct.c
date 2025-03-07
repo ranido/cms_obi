@@ -1,3 +1,1 @@
-int userfunc(int x) {
-    return x;
-}
+managed-correct.c

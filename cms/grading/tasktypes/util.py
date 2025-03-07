@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -30,22 +29,14 @@ compilation and the evaluation are contained in the task type class.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import io
 import logging
 import os
 import shutil
 
 from cms import config
 from cms.grading import JobException
-from cms.grading.Sandbox import Sandbox
 from cms.grading.Job import CompilationJob, EvaluationJob
+from cms.grading.Sandbox import Sandbox
 from cms.grading.steps import EVALUATION_MESSAGES, checker_step, \
     white_diff_fobj_step
 
@@ -69,7 +60,7 @@ def create_sandbox(file_cacher, name=None):
     """
     try:
         sandbox = Sandbox(file_cacher, name=name)
-    except (OSError, IOError):
+    except OSError:
         err_msg = "Couldn't create sandbox."
         logger.error(err_msg, exc_info=True)
         raise JobException(err_msg)
@@ -87,13 +78,13 @@ def delete_sandbox(sandbox, success=True, keep_sandbox=False):
     """
     # If the job was not successful, we keep the sandbox around.
     if not success:
-        logger.warning("Sandbox %s kept around because job did not succeeded.",
+        logger.warning("Sandbox %s kept around because job did not succeed.",
                        sandbox.get_root_path())
 
     delete = success and not config.keep_sandbox and not keep_sandbox
     try:
         sandbox.cleanup(delete=delete)
-    except (IOError, OSError):
+    except OSError:
         err_msg = "Couldn't delete sandbox."
         logger.warning(err_msg, exc_info=True)
 
@@ -272,7 +263,7 @@ def eval_output(file_cacher, job, checker_codename,
 
     else:
         if user_output_path is not None:
-            user_output_fobj = io.open(user_output_path, "rb")
+            user_output_fobj = open(user_output_path, "rb")
         else:
             user_output_fobj = file_cacher.get_file(user_output_digest)
         with user_output_fobj:
