@@ -169,7 +169,7 @@
         <form action="{{ contest_url("start") }}" method="POST" style="margin: 0">
             {{ xsrf_form_html|safe }}
             <input type="hidden" name="next" value="{{ contest_url() }}">
-            <button type="submit" class="btn btn-danger btn-large" style="width:100%;-moz-box-sizing:border-box;box-sizing:border-box;" type="submit" onclick="alert('Eu atesto que estou fazendo a prova na escola, sob supervisão, e que não usarei ferramentas de inteligência artificial nem consultarei a internet para tentar resolver as tarefas. Entendo que a violação das regras da OBI2024 implicará na minha desclassificação.')">{% trans %}Start!{% endtrans %}</button>
+            <button type="submit" class="btn btn-danger btn-large" style="width:100%;-moz-box-sizing:border-box;box-sizing:border-box;" type="submit" onclick="alert('Eu atesto que estou fazendo a prova na escola, sob supervisão, e que não usarei ferramentas de inteligência artificial nem consultarei a internet para tentar resolver as tarefas. Entendo que a violação das regras da OBI implicará na minha desclassificação.')">{% trans %}Start!{% endtrans %}</button>
         </form>
     {% endif %}
 
